@@ -9,6 +9,7 @@
 | 特性 | 描述 |
 | :--- | :--- |
 | **一键式部署** | 一条命令完成环境依赖安装、项目克隆和配置初始化。 |
+| **智能快捷指令** | **脚本首次运行会自动配置 `st` 命令**。配置完成后，下次只需在终端输入 `st` 即可直接唤起菜单。 |
 | **TUI 交互式管理** | 提供直观的文本用户界面（TUI）菜单，集成服务状态和实时远程链接显示。 |
 | **后台稳定运行** | 使用 `setsid nohup` 启动，并启用 `termux-wake-lock` 锁，确保服务在 Termux 后台和屏幕熄灭时保持稳定不断线。 |
 | **跨设备分享** | 利用 Cloudflare 隧道技术（无需额外配置），生成安全链接，实现从任何设备远程访问。 |
@@ -21,12 +22,14 @@
 ### 准备工作
 请确保您已安装并打开了安卓 Termux 终端应用。
 
-### 一条命令安装运行
+### 安装与启动
+请根据您的网络环境，选择下面**其中一条**命令复制到 Termux 中执行。
+*(该命令会自动下载脚本、赋予执行权限并启动安装程序)*
 
 #### 🌏 通用/国际线路 (Global)
 如果您在非中国大陆地区，或网络环境允许访问 GitHub：
 ```bash
-curl -LO https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
+curl -L https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
 ```
 
 #### 🚀 国内加速线路 (China Mainland)
@@ -34,25 +37,25 @@ curl -LO https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod 
 
 **线路 1 (EdgeOne):**
 ```bash
-curl -LO https://edgeone.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
+curl -L https://edgeone.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
 ```
 
 **线路 2 (HK):**
 ```bash
-curl -LO https://hk.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
+curl -L https://hk.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
 ```
 
 **线路 3 (Generic):**
 ```bash
-curl -LO https://gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
+curl -L https://gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
 ```
 
-**线路 4 (Likk):**
+**线路 4 (Likk - 推荐):**
 ```bash
-curl -LO https://gh.likk.cc/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
+curl -L https://gh.likk.cc/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
 ```
 
-执行上述任一命令后，脚本将自动完成环境检测、依赖安装和项目部署，并最终进入 TUI 管理菜单。
+> **💡 提示**：脚本首次成功运行后，会自动在您的系统中创建快捷指令。以后您只需输入 **`st`** 并回车，即可随时打开管理菜单，无需重复输入下载命令。
 
 ## 🛡️ 安全与多用户设置
 

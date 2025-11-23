@@ -177,7 +177,7 @@ show_menu() {
         echo -e "  2. 🏠 启动本地模式"
         echo -e "  3. 📜 查看运行日志"
         echo -e "  4. 🛑 停止所有服务"
-        echo -e "  5. 🔄 无损更新 (酒馆+脚本)"
+        echo -e "  5. 🔄 无损更新"
         echo -e "  6. 🛠️  重置安全配置"
         echo -e "  0. 退出"
         echo ""

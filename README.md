@@ -22,13 +22,37 @@
 请确保您已安装并打开了安卓 Termux 终端应用。
 
 ### 一条命令安装运行
-您只需要在您的 Termux 终端中执行以下一条命令：
 
+#### 🌏 通用/国际线路 (Global)
+如果您在非中国大陆地区，或网络环境允许访问 GitHub：
 ```bash
 curl -LO https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
 ```
 
-执行上述命令后，脚本将自动完成环境检测、依赖安装和项目部署，并最终进入 TUI 管理菜单。
+#### 🚀 国内加速线路 (China Mainland)
+如果遇到网络连接问题，请任选以下一条加速命令执行：
+
+**线路 1 (EdgeOne):**
+```bash
+curl -LO https://edgeone.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
+```
+
+**线路 2 (HK):**
+```bash
+curl -LO https://hk.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
+```
+
+**线路 3 (Generic):**
+```bash
+curl -LO https://gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
+```
+
+**线路 4 (Likk):**
+```bash
+curl -LO https://gh.likk.cc/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh && chmod +x st.sh && ./st.sh
+```
+
+执行上述任一命令后，脚本将自动完成环境检测、依赖安装和项目部署，并最终进入 TUI 管理菜单。
 
 ## 🛡️ 安全与多用户设置
 

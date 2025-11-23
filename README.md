@@ -1,20 +1,50 @@
 # TAV-X：Termux 自动化安装脚本
 
+## 📱 让闲置安卓机变身“私人云端酒馆”：TAV-X 一键部署方案
+
+**你还在为想随时随地玩 SillyTavern（酒馆）而发愁吗？**
+手里有闲置的旧安卓手机在“吃灰”？想用主力 iPhone 畅聊却苦于系统限制？
+
+**TAV-X (Termux Automated Venture-X)** 来了！这就是你一直在寻找的终极解决方案。
+
+无需复杂的 Linux 知识，无需繁琐的网络配置，只需要一条命令，瞬间将你的安卓手机变成一台 24 小时在线的 AI 专属服务器！
+
+### 🌟 为什么选择 TAV-X？
+
+#### ♻️ 变废为宝，旧机新生
+不要让旧手机躺在抽屉里贬值！只要能运行 Termux，它就是你最棒的随身服务器。
+部署在旧安卓，享受在新手机。甚至可以用平板、电脑、电视浏览器访问，榨干旧设备的每一滴性能！
+
+#### 🍎 安卓部署，苹果畅玩
+iOS 用户狂喜！你不需要在 iPhone 上折腾复杂的环境。
+将 TAV-X 部署在安卓备用机上，通过生成的专属链接，你的 iPhone/iPad 甚至 PC/Mac 都能通过浏览器无缝接入，体验丝滑的原生酒馆。
+
+#### 🚀 全程“无痛”，告别魔法
+受够了为了连接还要开关梯子？
+TAV-X 内置 Cloudflare 隧道技术，无需魔法，无需公网 IP。无论你在家里、公司、还是在移动数据网络下，都能随时随地打开链接直达你的酒馆。
+
+#### 🔒 数据私有，安全无忧
+所有聊天记录、角色卡片、世界书依然存储在你本地的安卓设备上，数据掌握在自己手中。不用担心云端服务商偷看你的隐私。
+
+#### 👥 成为“馆主”，多人协作
+脚本默认开启多用户模式！
+你可以作为管理员（Admin）掌控全局，同时创建一个普通账户分享给朋友、或者作为自己的“纯净小号”使用。通过一个链接，实现多人同时在线畅聊。
+
+---
+
 ## 🚀 项目简介
 
-**TAV-X (Termux Automated Venture-X)** 是一个为安卓 Termux 环境量身定制的傻瓜式一键安装脚本，旨在简化 SillyTavern 的部署和管理流程。无论您是想在本地使用，还是通过安全隧道跨设备远程访问您的“酒馆”，TAV-X 都能助您一臂之力，让您在安卓手机上随时随地进入您的专属 AI 聊天环境。
+**TAV-X** 是一个为安卓 Termux 环境量身定制的傻瓜式一键安装脚本，旨在简化 SillyTavern 的部署和管理流程。它集成了环境配置、依赖安装、隧道穿透和后台保活功能。
 
 ## ✨ 项目核心亮点
 
 | 特性 | 描述 |
 | :--- | :--- |
 | **一键式部署** | 一条命令完成环境依赖安装、项目克隆和配置初始化。 |
-| **智能快捷指令** | **脚本首次运行会自动配置 `st` 命令**。配置完成后，下次只需在终端输入 `st` 即可直接唤起菜单。 |
+| **智能快捷指令** | 自动配置 `st` 命令，配置完成后，下次只需输入 `st` 即可直接唤起菜单。 |
 | **TUI 交互式管理** | 提供直观的文本用户界面（TUI）菜单，集成服务状态和实时远程链接显示。 |
 | **后台稳定运行** | 使用 `setsid nohup` 启动，并启用 `termux-wake-lock` 锁，确保服务在 Termux 后台和屏幕熄灭时保持稳定不断线。 |
 | **跨设备分享** | 利用 Cloudflare 隧道技术（无需额外配置），生成安全链接，实现从任何设备远程访问。 |
-| **多用户模式** | 自动开启多用户功能，可添加多个用户，通过分享链接实现协作。 |
-| **安卓部署优势** | 专为 Termux 优化，实现在安卓手机部署，跨设备随时进入酒馆的便捷体验。 |
 | **无损更新** | 自动暂存本地修改，确保核心项目更新后本地文件和数据不受影响。 |
 
 ## ⚡ 快速开始
@@ -22,14 +52,14 @@
 ### 准备工作
 请确保您已安装并打开了安卓 Termux 终端应用。
 
-### 安装与启动
+### 📥 安装与启动命令
+
 请根据您的网络环境，选择下面**其中一条**命令复制到 Termux 中执行。
-*(该命令会自动下载脚本、赋予执行权限并启动安装程序)*
 
 #### 🌏 通用/国际线路 (Global)
 如果您在非中国大陆地区，或网络环境允许访问 GitHub：
 ```bash
-curl -L https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
+curl -s -L https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
 ```
 
 #### 🚀 国内加速线路 (China Mainland)
@@ -37,25 +67,32 @@ curl -L https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh &
 
 **线路 1 (EdgeOne):**
 ```bash
-curl -L https://edgeone.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
+curl -s -L https://edgeone.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
 ```
 
 **线路 2 (HK):**
 ```bash
-curl -L https://hk.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
+curl -s -L https://hk.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
 ```
 
 **线路 3 (Generic):**
 ```bash
-curl -L https://gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
+curl -s -L https://gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
 ```
 
 **线路 4 (Likk - 推荐):**
 ```bash
-curl -L https://gh.likk.cc/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh
+curl -s -L https://gh.likk.cc/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
 ```
 
-> **💡 提示**：脚本首次成功运行后，会自动在您的系统中创建快捷指令。以后您只需输入 **`st`** 并回车，即可随时打开管理菜单，无需重复输入下载命令。
+### ⚠️ 重要提示：首次运行操作规范
+
+为了确保快捷指令 `st` 正确生效，请严格按照以下步骤操作：
+
+1.  执行上述安装命令后，脚本会自动进入安装流程并最终显示菜单界面。
+2.  **请不要进行任何操作！** 在首次进入菜单界面时，直接输入数字 **`0`** 并回车退出脚本。
+3.  退出后，在终端输入 **`st`** 并回车。
+4.  此时脚本再次启动，环境配置已完全生效，您可以正常使用所有功能了。
 
 ## 🛡️ 安全与多用户设置
 

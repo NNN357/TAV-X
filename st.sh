@@ -554,3 +554,5 @@ auto_setup_alias
 if [ ! -d "$INSTALL_DIR" ]; then install_st; fi
 if [ -d "$INSTALL_DIR" ]; then apply_global_optimizations; fi
 show_menu
+
+exec bash

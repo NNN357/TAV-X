@@ -79,7 +79,7 @@ curl -s -L https://hk.gh-proxy.com/https://raw.githubusercontent.com/Future-404/
 curl -s -L https://gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
 ```
 
-**线路 4 (Likk - 推荐):**
+**线路 4 (Likk):**
 ```bash
 curl -s -L https://gh.likk.cc/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
 ```

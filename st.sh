@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X v1.9 - 测试  (Fixed by Future404 & Co-Pilot)
+# TAV-X v1.9.1 - 环境自检修复版
 
 # --- 常量定义 ---
 MIRROR_CONFIG="$HOME/.st_mirror_url"
@@ -86,12 +86,36 @@ auto_setup_alias() {
 
 check_env() {
     auto_setup_alias
+    
+    # 1. 初步检查
     if command -v node &> /dev/null && command -v git &> /dev/null && command -v cloudflared &> /dev/null && command -v setsid &> /dev/null; then
         return 0
     fi
-    echo -e "${YELLOW}>>> 正在初始化环境...${NC}"
+    
+    echo -e "${YELLOW}>>> 检测到环境缺失，正在初始化...${NC}"
+    echo -e "${CYAN}>>> 正在更新软件包列表 (pkg update)...${NC}"
     pkg update -y
+    
+    echo -e "${CYAN}>>> 正在安装依赖 (node, git, cloudflared)...${NC}"
     pkg install nodejs-lts git cloudflared util-linux tar nmap -y
+    
+    echo -e "${CYAN}>>> 正在进行二次核验...${NC}"
+    
+    # 2. 严格二次核验：任何一个核心组件缺失都直接报错退出
+    MISSING=""
+    if ! command -v git &> /dev/null; then MISSING="$MISSING git"; fi
+    if ! command -v node &> /dev/null; then MISSING="$MISSING node"; fi
+    if ! command -v cloudflared &> /dev/null; then MISSING="$MISSING cloudflared"; fi
+    
+    if [ -n "$MISSING" ]; then
+        echo -e "${RED}❌ 致命错误：以下组件安装失败:$MISSING${NC}"
+        echo -e "${YELLOW}请尝试手动运行以下命令修复：${NC}"
+        echo -e "pkg update -y && pkg install nodejs-lts git cloudflared util-linux -y"
+        echo -e "${RED}脚本无法继续，即将退出。${NC}"
+        exit 1
+    else
+        echo -e "${GREEN}✅ 环境检查通过！${NC}"
+    fi
 }
 
 print_banner() {
@@ -110,7 +134,6 @@ print_banner() {
 
 apply_global_optimizations() {
     ensure_minimal_config
-    # 使用正则精准替换，避免误伤
     sed -i 's/enableUserAccounts: false/enableUserAccounts: true/' "$CONFIG_FILE"
     sed -i 's/lazyLoadCharacters: false/lazyLoadCharacters: true/' "$CONFIG_FILE"
     sed -i 's/useDiskCache: true/useDiskCache: false/' "$CONFIG_FILE"
@@ -134,7 +157,6 @@ enable_server_plugins() {
         return
     else
         sed -i 's/enableServerPlugins: false/enableServerPlugins: true/' "$CONFIG_FILE"
-        # 防止配置项不存在的情况，追加一行
         if ! grep -q "enableServerPlugins" "$CONFIG_FILE"; then
              echo "enableServerPlugins: true" >> "$CONFIG_FILE"
         fi
@@ -151,24 +173,19 @@ install_plugin_core() {
 
     echo -e "${CYAN}>>> 正在安装: $name${NC}"
     
-    # 1. 准备网络配置 (修复代理套娃问题)
     CONFIG_STR=$(get_current_config)
     TYPE=${CONFIG_STR%%:*}
     VALUE=${CONFIG_STR#*:}
     
-    # 强制 git clone 使用的命令前缀
     GIT_CMD="git clone"
-    
-    # 目标仓库地址
     TARGET_REPO="$repo"
     
     if [ "$TYPE" == "PROXY" ]; then
-        # 代理模式：指定 http.proxy
         GIT_CMD="git clone -c http.proxy=$VALUE"
         echo -e "${YELLOW}   使用代理: $VALUE${NC}"
     else
-        # 镜像模式：拼接 URL + 清除可能的全局代理干扰
-        # 关键修复：使用 env -u 确保不走系统环境变量代理
+        # 镜像模式：拼接 URL + 强制清空代理防止干扰
+        # 使用 env -u 是为了防止系统环境变量里的代理干扰
         GIT_CMD="env -u http_proxy -u https_proxy git clone -c http.proxy="
         TARGET_REPO="${VALUE}${repo}"
         echo -e "${YELLOW}   使用镜像: $VALUE${NC}"
@@ -187,12 +204,12 @@ install_plugin_core() {
         
         mkdir -p "$INSTALL_DIR/plugins"
         
-        # 修复 HEAD 分支处理
         BRANCH_ARG=""
         if [ "$branch_server" != "HEAD" ]; then
             BRANCH_ARG="-b $branch_server"
         fi
         
+        # 执行 Git 命令
         if $GIT_CMD $BRANCH_ARG --depth 1 "$TARGET_REPO" "$SERVER_PATH"; then
             echo -e "${GREEN}   √ 服务端部署成功${NC}"
         else
@@ -214,7 +231,6 @@ install_plugin_core() {
         
         mkdir -p "$CLIENT_BASE"
         
-        # 修复 HEAD 分支处理
         BRANCH_ARG=""
         if [ "$branch_client" != "HEAD" ]; then
             BRANCH_ARG="-b $branch_client"
@@ -252,7 +268,6 @@ plugin_menu() {
         
         read -p "请选择要安装的插件编号: " p_idx
         
-        # 输入验证
         if ! [[ "$p_idx" =~ ^[0-9]+$ ]]; then
              if [ -n "$p_idx" ]; then echo -e "${RED}输入错误${NC}"; sleep 1; fi
              return
@@ -265,7 +280,6 @@ plugin_menu() {
         if [ -n "${PLUGIN_LIST[$real_idx]}" ]; then
             IFS='|' read -r p_name p_repo p_s_branch p_c_branch p_dir <<< "${PLUGIN_LIST[$real_idx]}"
             
-            # 去除空格
             p_name=$(echo "$p_name" | xargs)
             p_repo=$(echo "$p_repo" | xargs)
             p_s_branch=$(echo "$p_s_branch" | xargs)
@@ -501,15 +515,24 @@ check_storage_permission() {
         echo -e "${CYAN}请在弹窗中点击【允许】以访问存储。${NC}"
         termux-setup-storage
         sleep 2
-        [ ! -d "$HOME/storage" ] && return 1
+        if [ ! -d "$HOME/storage" ]; then
+            echo -e "${RED}错误：无法访问存储。请确保授予权限后重试。${NC}"
+            return 1
+        fi
     fi
     return 0
 }
 
 perform_backup() {
     check_storage_permission || return
-    [ ! -d "$INSTALL_DIR/data" ] && return
-    mkdir -p "$BACKUP_DIR"
+    if [ ! -d "$INSTALL_DIR/data" ]; then
+        echo -e "${RED}错误：找不到酒馆数据目录 ($INSTALL_DIR/data)${NC}"
+        read -p "按回车返回..."
+        return
+    fi
+    if [ ! -d "$BACKUP_DIR" ]; then
+        mkdir -p "$BACKUP_DIR"
+    fi
     TIMESTAMP=$(date +%Y%m%d_%H%M%S)
     BACKUP_FILE="$BACKUP_DIR/ST_Backup_$TIMESTAMP.tar.gz"
     echo -e "${CYAN}正在备份...${NC}"
@@ -525,32 +548,55 @@ perform_backup() {
 
 perform_restore() {
     check_storage_permission || return
-    [ ! -d "$BACKUP_DIR" ] && echo "${RED}无备份目录${NC}" && sleep 1 && return
+    if [ ! -d "$BACKUP_DIR" ]; then
+        echo -e "${RED}未找到备份目录: $BACKUP_DIR${NC}"
+        read -p "按回车返回..."
+        return
+    fi
     files=("$BACKUP_DIR"/ST_Backup_*.tar.gz)
-    [ ! -e "${files[0]}" ] && echo "${RED}无备份文件${NC}" && sleep 1 && return
-    
+    if [ ! -e "${files[0]}" ]; then
+        echo -e "${RED}在 Download/ST_Backup 中未找到有效的备份文件。${NC}"
+        read -p "按回车返回..."
+        return
+    fi
     clear
-    echo -e "${CYAN}选择备份恢复:${NC}"
+    echo -e "${CYAN}=== 选择要恢复的备份文件 ===${NC}"
+    echo -e "${YELLOW}注意：这只显示 ST_Backup 开头的 .tar.gz 文件${NC}"
+    echo ""
     i=1
     for file in "${files[@]}"; do
-        echo "$i. $(basename "$file")"
+        filename=$(basename "$file")
+        echo -e "$i. $filename"
         ((i++))
     done
     echo "0. 返回"
-    read -p "选择: " idx
-    [ "$idx" == "0" ] && return
-    
-    SELECTED="${files[$((idx-1))]}"
-    [ -z "$SELECTED" ] && return
-
-    echo -e "${RED}⚠️  警告: 将覆盖当前数据!${NC}"
-    read -p "输入 yes 确认: " confirm
-    if [ "$confirm" == "yes" ]; then
-        rm -rf "$INSTALL_DIR/data"
-        mkdir -p "$INSTALL_DIR/data"
-        tar -xzf "$SELECTED" -C "$INSTALL_DIR"
-        echo -e "${GREEN}✅ 恢复完成${NC}"
+    echo ""
+    read -p "请选择编号: " file_idx
+    if [[ "$file_idx" == "0" ]]; then return; fi
+    SELECTED_FILE="${files[$((file_idx-1))]}"
+    if [ -z "$SELECTED_FILE" ] || [ ! -f "$SELECTED_FILE" ]; then
+        echo -e "${RED}无效的选择。${NC}"
+        sleep 1
+        return
     fi
+    echo ""
+    echo -e "${RED}⚠️  高危警告 ⚠️${NC}"
+    echo -e "您即将从备份 [ $(basename "$SELECTED_FILE") ] 恢复数据。"
+    echo -e "${RED}此操作将【彻底删除】当前酒馆内的所有聊天记录和角色！${NC}"
+    echo -e "确定要继续吗？"
+    read -p "输入 'yes' 确认覆盖: " confirm
+    if [[ "$confirm" != "yes" ]]; then
+        echo -e "${YELLOW}操作已取消。${NC}"
+        sleep 1
+        return
+    fi
+    echo -e "${CYAN}>>> 正在清空旧数据...${NC}"
+    rm -rf "$INSTALL_DIR/data"
+    echo -e "${CYAN}>>> 正在解压恢复...${NC}"
+    mkdir -p "$INSTALL_DIR/data"
+    tar -xzf "$SELECTED_FILE" -C "$INSTALL_DIR"
+    echo -e "${GREEN}✅ 恢复完成！${NC}"
+    echo -e "${YELLOW}建议您稍后重启酒馆。${NC}"
     read -p "按回车返回..."
 }
 
@@ -596,7 +642,7 @@ install_st() {
             echo -e "${RED}❌ 下载失败，进入线路选择...${NC}"
             sleep 2
             select_mirror
-            install_st
+            install_st # 递归重试
             return
         fi
         cd "$INSTALL_DIR" || return
@@ -633,7 +679,7 @@ update_st() {
         read -p "选择: " retry_choice
         if [[ "$retry_choice" == "y" ]]; then
             select_mirror
-            update_st
+            update_st # 递归重试
             return
         else
             echo -e "${RED}更新中止。${NC}"
@@ -704,7 +750,7 @@ show_menu() {
         BREAK_LOOP=false
         clear
         print_banner
-        echo -e "${CYAN}             Version 1.9${NC}"
+        echo -e "${CYAN}             Version 1.9.1${NC}"
         if pgrep -f "node server.js" > /dev/null; then
             echo -e "状态: ${GREEN}● 运行中${NC}"
             IS_RUNNING=true

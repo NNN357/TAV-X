@@ -9,7 +9,7 @@ CONFIG_FILE="$INSTALL_DIR/config.yaml"
 CF_LOG="$INSTALL_DIR/cf_tunnel.log"
 SERVER_LOG="$INSTALL_DIR/server.log"
 BACKUP_DIR="$HOME/storage/downloads/ST_Backup"
-# 默认镜像：最稳的官方直连
+# 默认镜像：官方直连
 DEFAULT_MIRROR="https://mirror.ghproxy.com/"
 
 # --- 颜色定义 ---
@@ -88,9 +88,6 @@ auto_setup_alias() {
 check_env() {
     auto_setup_alias
     
-    # 0. 自愈逻辑: 清理可能导致重定向死循环的配置 (稍微放宽，因为我们现在支持跳转线路了)
-    # 只有当用户真的遇到问题重置时，这个逻辑可以保留，或者我们可以暂时注释掉
-    # 这里保留最基础的检测：如果文件内容为空则删除
     if [ -f "$MIRROR_CONFIG" ]; then
         if [ ! -s "$MIRROR_CONFIG" ]; then rm -f "$MIRROR_CONFIG"; fi
     fi

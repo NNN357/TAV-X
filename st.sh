@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X v1.9.3 - 修复代理加速嵌套
+# TAV-X v1.9.6 - 
 
 # --- 常量定义 ---
 MIRROR_CONFIG="$HOME/.st_mirror_url"
@@ -9,7 +9,7 @@ CONFIG_FILE="$INSTALL_DIR/config.yaml"
 CF_LOG="$INSTALL_DIR/cf_tunnel.log"
 SERVER_LOG="$INSTALL_DIR/server.log"
 BACKUP_DIR="$HOME/storage/downloads/ST_Backup"
-# 默认使用直连稳定源
+# 默认镜像：最稳的官方直连
 DEFAULT_MIRROR="https://mirror.ghproxy.com/"
 
 # --- 颜色定义 ---
@@ -87,13 +87,12 @@ auto_setup_alias() {
 
 check_env() {
     auto_setup_alias
-
-    # 0. 自愈逻辑：清理旧的镜像配置
+    
+    # 0. 自愈逻辑: 清理可能导致重定向死循环的配置 (稍微放宽，因为我们现在支持跳转线路了)
+    # 只有当用户真的遇到问题重置时，这个逻辑可以保留，或者我们可以暂时注释掉
+    # 这里保留最基础的检测：如果文件内容为空则删除
     if [ -f "$MIRROR_CONFIG" ]; then
-        if grep -q "gh-proxy.com" "$MIRROR_CONFIG" || grep -q "gh-proxy.org" "$MIRROR_CONFIG"; then
-            echo -e "${YELLOW}>>> 检测到不稳定镜像源，已自动重置。${NC}"
-            rm -f "$MIRROR_CONFIG"
-        fi
+        if [ ! -s "$MIRROR_CONFIG" ]; then rm -f "$MIRROR_CONFIG"; fi
     fi
 
     # 1. 环境检查
@@ -101,7 +100,7 @@ check_env() {
         return 0
     fi
 
-    echo -e "${YELLOW}>>> 环境初始化...${NC}"
+    echo -e "${YELLOW}>>> 检测到环境缺失，正在初始化...${NC}"
     pkg update -y
     pkg install nodejs-lts git cloudflared util-linux tar nmap -y
 
@@ -112,8 +111,8 @@ check_env() {
     if ! command -v cloudflared &> /dev/null; then MISSING="$MISSING cloudflared"; fi
 
     if [ -n "$MISSING" ]; then
-        echo -e "${RED}❌ 致命错误：组件安装失败:$MISSING${NC}"
-        echo -e "${YELLOW}尝试手动运行：pkg update -y && pkg install nodejs-lts git cloudflared util-linux -y${NC}"
+        echo -e "${RED}❌ 致命错误：核心组件安装失败:$MISSING${NC}"
+        echo -e "${YELLOW}请尝试手动运行：pkg update -y && pkg install nodejs-lts git cloudflared util-linux -y${NC}"
         exit 1
     fi
 }
@@ -170,20 +169,19 @@ install_plugin_core() {
     TYPE=${CONFIG_STR%%:*}
     VALUE=${CONFIG_STR#*:}
 
-    # 沙盒模式：强制 GIT_CONFIG_GLOBAL 指向空，彻底屏蔽用户配置
+    # 沙盒环境: 屏蔽用户全局配置
     local SAFE_ENV="env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null"
 
     if [ "$TYPE" == "PROXY" ]; then
         GIT_CMD="$SAFE_ENV git clone -c http.proxy=$VALUE"
         echo -e "${YELLOW}   使用代理: $VALUE${NC}"
     else
-        # 镜像模式：同时清理代理变量
         GIT_CMD="$SAFE_ENV env -u http_proxy -u https_proxy git clone -c http.proxy="
         TARGET_REPO="${VALUE}${repo}"
         echo -e "${YELLOW}   使用镜像: $VALUE${NC}"
     fi
 
-    # 2. 服务端
+    # 2. 处理服务端
     if [ "$branch_server" != "-" ]; then
         enable_server_plugins
         SERVER_PATH="$INSTALL_DIR/plugins/$dir_name"
@@ -200,7 +198,7 @@ install_plugin_core() {
         fi
     fi
 
-    # 3. 客户端
+    # 3. 处理客户端
     if [ "$branch_client" != "-" ]; then
         CLIENT_BASE="$INSTALL_DIR/public/scripts/extensions/third-party"
         CLIENT_PATH="$CLIENT_BASE/$dir_name"
@@ -216,7 +214,8 @@ install_plugin_core() {
             return 1
         fi
     fi
-    echo -e "${GREEN}🎉 安装完成！${NC}"; read -p "回车继续..."
+    echo -e "${GREEN}🎉 安装完成！${NC}"
+    read -p "回车继续..."
 }
 
 plugin_menu() {
@@ -244,17 +243,24 @@ plugin_menu() {
 }
 
 # --- 验证工具函数 ---
+
 validate_proxy_format() {
     if [[ "$1" =~ ^(http|https|socks5|socks5h)://.+ ]]; then return 0; else return 1; fi
 }
+
 test_proxy_connection() {
     echo -e "${YELLOW}>>> 测试代理 ($1)...${NC}"
     if curl -s -o /dev/null --connect-timeout 5 --proxy "$1" https://www.google.com; then return 0; else return 1; fi
 }
-test_mirror_connection() {
-    echo -e "${YELLOW}>>> 测试镜像...${NC}"
-    # 强制不使用代理测速
-    if env -u http_proxy -u https_proxy curl -s -o /dev/null --noproxy "*" --connect-timeout 5 "${1}https://github.com"; then return 0; else return 1; fi
+
+# 【核心更新】智能检测并返回具体状态
+# 返回 200 = 极佳, 301/302 = 跳转(可用但警告), 其他 = 失败
+get_mirror_status_code() {
+    local target="$1"
+    local test_url="${target}https://github.com/SillyTavern/SillyTavern.git/info/refs?service=git-upload-pack"
+    
+    # 获取 HTTP 状态码
+    env -u http_proxy -u https_proxy curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "$test_url"
 }
 
 # --- 功能菜单函数 ---
@@ -262,37 +268,46 @@ test_mirror_connection() {
 select_mirror() {
     clear
     echo -e "${CYAN}=== 🌐 Github 下载线路配置 ===${NC}"
-    echo -e "正在测试线路连通性..."
+    echo -e "${YELLOW}正在检测线路... (沙盒模式已护航，跳转线路也安全)${NC}"
+    
+    # 恢复了所有线路
     mirrors=(
         "https://mirror.ghproxy.com/"
         "https://gh.likk.cc/"
         "https://edgeone.gh-proxy.com/"
         "https://hk.gh-proxy.com/"
+        "https://gh-proxy.com/"
         "https://github.moeyy.xyz/"
     )
+    
     printf "%-4s %-10s %-30s\n" "编号" "状态" "线路地址"
     echo "------------------------------------------------"
     i=1
     valid_indices=()
     for mirror in "${mirrors[@]}"; do
-        if env -u http_proxy -u https_proxy curl -s -o /dev/null --noproxy "*" --connect-timeout 5 "${mirror}https://github.com"; then
-            status="${GREEN}🟢 通畅${NC}"
+        code=$(get_mirror_status_code "$mirror")
+        
+        if [ "$code" == "200" ]; then
+            status="${GREEN}🟢 极佳${NC}"
+        elif [[ "$code" == "301" || "$code" == "302" ]]; then
+            status="${YELLOW}🟡 跳转${NC}" # 新增：区分跳转状态
         else
-            status="${RED}🔴 超时${NC}"
+            status="${RED}🔴 失败${NC}"
         fi
+        
         printf "%-4s %-15b %-30s\n" "$i." "$status" "$mirror"
         valid_indices+=($i)
         ((i++))
     done
     echo "------------------------------------------------"
     echo -e "7. 自定义镜像地址"
-    echo -e "8. 使用代理直连"
-    echo -e "0. 退出脚本"
+    echo -e "8. 使用代理直连 (Use Proxy)"
+    echo -e "0. 退出脚本 (Exit)"
     echo ""
     read -p "请选择: " choice
 
     case $choice in
-        0) exit 0 ;; # 直接退出脚本，防止死循环
+        0) exit 0 ;; # 直接退出脚本
         8)
             while true; do
                 echo -e "${YELLOW}输入代理 (示例: socks5://127.0.0.1:10808)${NC}"
@@ -317,12 +332,13 @@ select_mirror() {
                 if [ "$custom_url" == "0" ]; then return; fi
                 if [[ $custom_url == http* ]]; then
                     [[ "${custom_url}" != */ ]] && custom_url="${custom_url}/"
-                    if test_mirror_connection "$custom_url"; then
+                    code=$(get_mirror_status_code "$custom_url")
+                    if [[ "$code" == "200" || "$code" == "301" || "$code" == "302" ]]; then
                         echo "$custom_url" > "$MIRROR_CONFIG"
                         rm -f "$PROXY_CONFIG_FILE"
-                        echo -e "${GREEN}✅ 已切换${NC}"; break
+                        echo -e "${GREEN}✅ 验证通过，已切换${NC}"; break
                     else
-                         echo -e "${RED}❌ 镜像不可用${NC}"
+                         echo -e "${RED}❌ 镜像不可用 (状态码: $code)${NC}"
                     fi
                 else
                     echo -e "${RED}格式错误${NC}"
@@ -474,7 +490,7 @@ install_st() {
     if [ ! -d "$INSTALL_DIR" ]; then
         echo -e "${CYAN}>>> 开始部署...${NC}"
 
-        # 沙盒模式：屏蔽所有全局配置，解决 URL 解析错误和代理嵌套问题
+        # 沙盒环境: 防止用户全局 git 配置干扰
         local SAFE_ENV="env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null"
         
         if [ "$TYPE" == "PROXY" ]; then
@@ -490,7 +506,7 @@ install_st() {
         if ! $GIT_CMD "$URL" "$INSTALL_DIR"; then
             echo -e "${RED}❌ 下载失败，进入线路选择...${NC}"
             sleep 2
-            select_mirror
+            select_mirror # 如果用户选0则直接退出
             install_st # 递归重试
             return
         fi
@@ -514,13 +530,12 @@ update_st() {
     echo -e "${CYAN}>>> 更新酒馆...${NC}"
     cd "$INSTALL_DIR" || exit
 
-    # 使用纯净环境进行 pull
+    # 沙盒环境 pull
     local SAFE_ENV="env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null"
 
     if [ "$TYPE" == "PROXY" ]; then git config http.proxy "$VALUE"; else git config --unset http.proxy; fi
     if [[ -n $(git status -s) ]]; then git stash; STASHED=1; fi
 
-    # 修复：使用沙盒环境执行 pull
     if ! $SAFE_ENV git pull; then
         echo -e "${RED}❌ 更新失败！${NC}"
         if [ "$TYPE" == "PROXY" ]; then git config --unset http.proxy; fi
@@ -584,7 +599,7 @@ exit_script() { exec bash; }
 show_menu() {
     while true; do
         BREAK_LOOP=false; clear; print_banner
-        echo -e "${CYAN}             Version 1.9.3${NC}"
+        echo -e "${CYAN}             Version 1.9.6${NC}"
         if pgrep -f "node server.js" > /dev/null; then echo -e "状态: ${GREEN}● 运行中${NC}"; IS_RUNNING=true
         else echo -e "状态: ${RED}● 已停止${NC}"; IS_RUNNING=false; fi
         echo ""; echo -e "  1. 🚀 远程分享"; echo -e "  2. 🏠 本地模式"

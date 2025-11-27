@@ -564,6 +564,57 @@ backup_menu() {
         case $bc in 1) perform_backup ;; 2) perform_restore ;; 0) return ;; *) echo -e "${RED}无效输入${NC}"; sleep 0.5 ;; esac
     done
 }
+
+run_adb_module() {
+    LOCAL_MODULE_DIR="$HOME/.tav_x/modules"
+    MODULE_FILE="$LOCAL_MODULE_DIR/adb_keepalive.sh"
+    
+    mkdir -p "$LOCAL_MODULE_DIR"
+    
+    if [ -f "$MODULE_FILE" ]; then
+        bash "$MODULE_FILE"
+        return
+    fi
+    
+    echo -e "${CYAN}>>> 本地模块缺失，正在从云端拉取...${NC}"
+    
+    CONFIG_STR=$(get_current_config)
+    TYPE=${CONFIG_STR%%:*}
+    VALUE=${CONFIG_STR#*:}
+    
+    RAW_URL="https://raw.githubusercontent.com/Future-404/TAV-X/main/modules/adb_keepalive.sh"
+    
+    if [ "$TYPE" == "PROXY" ]; then
+        DOWNLOAD_CMD="curl -s -L --proxy $VALUE"
+        FINAL_URL="$RAW_URL"
+    else
+        DOWNLOAD_CMD="env -u http_proxy -u https_proxy curl -s -L --noproxy '*'"
+        if [[ "$VALUE" == *"raw.githubusercontent.com"* ]]; then
+             FINAL_URL="$VALUE"
+        else
+             FINAL_URL="${VALUE}${RAW_URL}"
+        fi
+    fi
+    
+    echo -e "${YELLOW}>>> 正在下载: adb_keepalive.sh ...${NC}"
+    if $DOWNLOAD_CMD "$FINAL_URL" -o "${MODULE_FILE}.tmp"; then
+        if grep -q "bash" "${MODULE_FILE}.tmp"; then
+            mv "${MODULE_FILE}.tmp" "$MODULE_FILE"
+            chmod +x "$MODULE_FILE"
+            echo -e "${GREEN}✅ 模块安装成功！${NC}"
+            sleep 1
+            bash "$MODULE_FILE"
+        else
+            echo -e "${RED}❌ 下载失败：文件校验未通过。${NC}"
+            rm -f "${MODULE_FILE}.tmp"
+            read -p "回车返回..."
+        fi
+    else
+        echo -e "${RED}❌ 网络错误：无法连接到下载服务器。${NC}"
+        rm -f "${MODULE_FILE}.tmp"
+        read -p "回车返回..."
+    fi
+}
 rollback_st() {
     if [ ! -d "$INSTALL_DIR/.git" ]; then
         echo -e "${RED}❌ 目录无效或不是Git仓库，无法回退。${NC}"
@@ -805,7 +856,8 @@ show_menu() {
         echo -e "  3. 📜 监控日志"; echo -e "  4. 🛑 停止服务"
         echo -e "  5. 🔄 更新管理"; echo -e "  6. 🛠️  安全配置"
         echo -e "  7. 🌐 API代理"; echo -e "  8. 💾 备份与恢复"
-        echo -e "  9. 🌐 切换线路"; echo -e " 10. 🧩 插件管理"; echo -e "  0. 退出"
+        echo -e "  9. 🌐 切换线路"; echo -e " 10. 🧩 插件管理"
+        echo -e " 11. 🛡️  ADB保活"; echo -e "  0. 退出"
         echo ""
         if [ "$IS_RUNNING" = true ]; then
              echo -e "${CYAN}====== [ 实时链接 ] ======${NC}"
@@ -828,7 +880,9 @@ show_menu() {
             1) check_env; install_st; start_share ;; 2) check_env; install_st; start_local ;;
             3) view_logs ;; 4) stop_services; sleep 1 ;; 5) update_menu ;;
             6) security_menu ;; 7) configure_proxy ;; 8) backup_menu ;;
-            9) select_mirror ;; 10) plugin_menu ;; 0) exit_script ;; *) echo -e "${RED}无效输入${NC}"; sleep 0.5 ;;
+            9) select_mirror ;; 10) plugin_menu ;;
+            11) check_env; run_adb_module ;;
+            0) exit_script ;; *) echo -e "${RED}无效输入${NC}"; sleep 0.5 ;;
         esac
     done
 }

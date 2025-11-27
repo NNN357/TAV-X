@@ -1,6 +1,6 @@
 #!/bin/bash
-# TAV-X v1.11.5
-CURRENT_VERSION="v1.11.5"
+# TAV-X v1.11.6
+CURRENT_VERSION="v1.11.6"
 MIRROR_CONFIG="$HOME/.st_mirror_url"
 PROXY_CONFIG_FILE="$HOME/.st_download_proxy"
 INSTALL_DIR="$HOME/SillyTavern"
@@ -74,7 +74,7 @@ check_for_update() {
     local remote_info=""
     for mirror in "${check_mirrors[@]}"; do
         local check_url="${mirror}${SCRIPT_URL_BASE}"
-        remote_info=$(env -u http_proxy -u https_proxy curl -s -L -m 2 "$check_url" | grep "# TAV-X v" | head -n 1)
+        remote_info=$(env -u http_proxy -u https_proxy curl -s -L -m 5 "$check_url" | grep "# TAV-X v" | head -n 1)
         if [[ -n "$remote_info" ]]; then break; fi
     done
     if [[ -n "$remote_info" ]]; then
@@ -188,12 +188,26 @@ install_plugin_core() {
     local branch_server=$3
     local branch_client=$4
     local dir_name=$5
-    local batch_mode=$6
+    local batch_mode=$6 
+
+    # === [优化] 批量模式下的智能跳过逻辑 ===
+    if [ "$batch_mode" == "true" ]; then
+        # 检查是否已安装
+        if [ -d "$INSTALL_DIR/plugins/$dir_name" ] || [ -d "$INSTALL_DIR/public/scripts/extensions/third-party/$dir_name" ]; then
+            echo -e "${YELLOW}>>> 跳过: $name (已安装)${NC}"
+            return 0
+        fi
+    fi
+    # ========================================
+
     echo -e "${CYAN}>>> 正在安装: $name${NC}"
+
     CONFIG_STR=$(get_current_config)
     TYPE=${CONFIG_STR%%:*}
     VALUE=${CONFIG_STR#*:}
+
     local SAFE_ENV="env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null"
+
     if [ "$TYPE" == "PROXY" ]; then
         GIT_CMD="$SAFE_ENV git clone -c http.proxy=$VALUE"
         TARGET_REPO="$repo"
@@ -203,42 +217,61 @@ install_plugin_core() {
         TARGET_REPO="${VALUE}${repo}"
         if [ "$batch_mode" != "true" ]; then echo -e "${YELLOW}   使用镜像: $VALUE${NC}"; fi
     fi
+
     exec_git_with_retry() {
         local cmd="$GIT_CMD $@"
         if [ "$batch_mode" == "true" ]; then
+            # 批量模式下不显示详细报错，只显示结果
             retry_cmd "$cmd" >/dev/null 2>&1
         else
             retry_cmd "$cmd"
         fi
     }
+
     local install_success=false
+
+    # 2. 服务端插件处理
     if [ "$branch_server" != "-" ]; then
         enable_server_plugins
         SERVER_PATH="$INSTALL_DIR/plugins/$dir_name"
+        # 只有在非批量模式，或者确认要安装时才删除旧的（防止误删，虽然上面已经跳过了）
         if [ -d "$SERVER_PATH" ]; then rm -rf "$SERVER_PATH"; fi
         mkdir -p "$INSTALL_DIR/plugins"
         BRANCH_ARG=""; if [ "$branch_server" != "HEAD" ]; then BRANCH_ARG="-b $branch_server"; fi
+
         if exec_git_with_retry $BRANCH_ARG --depth 1 "$TARGET_REPO" "$SERVER_PATH"; then
-            echo -e "${GREEN}   √ 服务端部署成功${NC}"
+            if [ "$batch_mode" != "true" ]; then echo -e "${GREEN}   √ 服务端部署成功${NC}"; fi
             install_success=true
         else
-            echo -e "${RED}   ❌ 服务端下载失败！${NC}"
+            if [ "$batch_mode" != "true" ]; then echo -e "${RED}   ❌ 服务端下载失败！${NC}"; fi
         fi
     fi
+
+    # 3. 客户端插件处理
     if [ "$branch_client" != "-" ]; then
         CLIENT_BASE="$INSTALL_DIR/public/scripts/extensions/third-party"
         CLIENT_PATH="$CLIENT_BASE/$dir_name"
         if [ -d "$CLIENT_PATH" ]; then rm -rf "$CLIENT_PATH"; fi
         mkdir -p "$CLIENT_BASE"
         BRANCH_ARG=""; if [ "$branch_client" != "HEAD" ]; then BRANCH_ARG="-b $branch_client"; fi
+
         if exec_git_with_retry $BRANCH_ARG --depth 1 "$TARGET_REPO" "$CLIENT_PATH"; then
-            echo -e "${GREEN}   √ 客户端部署成功${NC}"
+            if [ "$batch_mode" != "true" ]; then echo -e "${GREEN}   √ 客户端部署成功${NC}"; fi
             install_success=true
         else
-            echo -e "${RED}   ❌ 客户端下载失败！${NC}"
+            if [ "$batch_mode" != "true" ]; then echo -e "${RED}   ❌ 客户端下载失败！${NC}"; fi
         fi
     fi
-    if [ "$batch_mode" != "true" ]; then
+
+    # 批量模式下的简略输出
+    if [ "$batch_mode" == "true" ]; then
+        if [ "$install_success" == "true" ]; then
+            echo -e "${GREEN}   ✅ 安装成功${NC}"
+        else
+            echo -e "${RED}   ❌ 安装失败${NC}"
+        fi
+    else
+        # 单装模式保持原有交互
         if [ "$install_success" == "true" ]; then
             echo -e "${GREEN}🎉 操作结束${NC}"
         else
@@ -249,12 +282,36 @@ install_plugin_core() {
 }
 install_all_plugins() {
     echo -e "${CYAN}=== 🚀 正在批量安装所有插件 ===${NC}"
-    echo -e "${YELLOW}请耐心等待，这可能需要几分钟...${NC}"
+    echo -e "${YELLOW}提示: 已安装的插件将自动跳过。${NC}"
+    echo -e "${RED}提示: 按 Ctrl+C 可随时强行停止。${NC}"
+    echo "----------------------------------------"
+    
+    BREAK_LOOP=false
+    
+    trap 'BREAK_LOOP=true; echo -e "\n${RED}🛑 检测到中断信号，正在停止...${NC}";' SIGINT
+
     for item in "${PLUGIN_LIST[@]}"; do
+        if [ "$BREAK_LOOP" = true ]; then
+            break
+        fi
+
         IFS='|' read -r p_name p_repo p_s_branch p_c_branch p_dir <<< "$item"
+        
         install_plugin_core "$(echo "$p_name"|xargs)" "$(echo "$p_repo"|xargs)" "$(echo "$p_s_branch"|xargs)" "$(echo "$p_c_branch"|xargs)" "$(echo "$p_dir"|xargs)" "true"
+        
+        if [ "$BREAK_LOOP" = true ]; then
+            break
+        fi
     done
-    echo -e "${GREEN}✅ 所有插件处理完毕！${NC}"
+
+    trap 'BREAK_LOOP=true' SIGINT
+
+    echo "----------------------------------------"
+    if [ "$BREAK_LOOP" = true ]; then
+        echo -e "${RED}⚠️  批量安装已强制终止。${NC}"
+    else
+        echo -e "${GREEN}✅ 所有任务处理完毕！${NC}"
+    fi
     read -p "回车返回..."
 }
 plugin_menu() {
@@ -308,7 +365,8 @@ select_mirror() {
         "https://gh.likk.cc/"
         "https://gh.rs/"
         "https://edgeone.gh-proxy.com/"
-        "https://ghproxy.link/"
+        "https://hk.gh-proxy.com/"
+        "https://gh-proxy.com/"
         "https://gh.idayer.com/"
     )
     printf "%-4s %-10s %-30s\n" "编号" "状态" "线路地址"

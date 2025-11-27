@@ -154,6 +154,8 @@ curl -s -L https://gh.likk.cc/https://raw.githubusercontent.com/Future-404/TAV-X
 
 **🎉 效果：** 设置完成后，您的 Cloudflare 远程链接将保持稳定直连，而酒馆内的 AI 对话将通过代理端口飞速响应！
 
+### 2. 保活模块常见问题
+
 **Q: 报错 `protocol fault (couldn't read status message)` 怎么办？**
 
 A: 这是 ADB 服务卡死了。在连接菜单输入 `r`，脚本会自动重启 ADB 服务并修复。

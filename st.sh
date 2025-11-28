@@ -1,15 +1,18 @@
 #!/bin/bash
-# TAV-X v1.12.1
-CURRENT_VERSION="v1.12.1"
+# TAV-X v1.12.5
+CURRENT_VERSION="v1.12.5"
 MIRROR_CONFIG="$HOME/.st_mirror_url"
 PROXY_CONFIG_FILE="$HOME/.st_download_proxy"
 INSTALL_DIR="$HOME/SillyTavern"
 CONFIG_FILE="$INSTALL_DIR/config.yaml"
+TAVX_DIR="$HOME/.tav_x"
+CACHE_DIR="$TAVX_DIR/cache"
+VERSION_FILE="$CACHE_DIR/latest_version"
 CF_LOG="$INSTALL_DIR/cf_tunnel.log"
 SERVER_LOG="$INSTALL_DIR/server.log"
 BACKUP_DIR="$HOME/storage/downloads/ST_Backup"
 DEFAULT_MIRROR="https://mirror.ghproxy.com/"
-SCRIPT_URL_BASE="https://edgecname.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh"
+SCRIPT_URL_BASE="https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -22,33 +25,34 @@ BREAK_LOOP=false
 trap 'BREAK_LOOP=true' SIGINT
 NEW_VERSION_AVAILABLE=""
 PLUGIN_LIST=(
-    "AIStudioBuildProxy (汉化/API代理) | https://edgecname.gh-proxy.com/https://github.com/il1umi/AIStudioBuildProxy.git | server | client | AIStudioBuildProxy"
-    "对话文本着色 | https://edgecname.gh-proxy.com/https://github.com/XanadusWorks/SillyTavern-Dialogue-Colorizer.git | - | HEAD | SillyTavern-Dialogue-Colorizer"
-    "顶部信息栏 | https://edgecname.gh-proxy.com/https://github.com/SillyTavern/Extension-TopInfoBar.git | - | HEAD | Extension-TopInfoBar"
-    "界面元素隐藏 | https://edgecname.gh-proxy.com/https://github.com/uhhhh15/hide.git | - | HEAD | hide"
-    "自定义模型列表 | https://edgecname.gh-proxy.com/https://github.com/LenAnderson/SillyTavern-CustomModels.git | - | HEAD | SillyTavern-CustomModels"
-    "聊天统计面板 | https://edgecname.gh-proxy.com/https://github.com/Junejulyz/chat-companion-stats.git | - | HEAD | chat-companion-stats"
-    "快速回复 | https://edgecname.gh-proxy.com/https://github.com/uhhhh15/QR.git | - | HEAD | QR"
-    "强力快速回复 | https://edgecname.gh-proxy.com/https://github.com/AlbusKen/quick-response-force.git | - | HEAD | quick-response-force"
-    "输入辅助助手 | https://edgecname.gh-proxy.com/https://github.com/Mooooooon/st-input-helper.git | - | HEAD | st-input-helper"
-    "提示词模板管理 | https://edgecname.gh-proxy.com/https://github.com/zonde306/ST-Prompt-Template.git | - | HEAD | ST-Prompt-Template"
-    "消息收藏/星标 | https://edgecname.gh-proxy.com/https://github.com/uhhhh15/star.git | - | HEAD | star"
-    "Amily2 聊天优化 | https://edgecname.gh-proxy.com/https://github.com/Wx-2025/ST-Amily2-Chat-Optimisation.git | - | HEAD | ST-Amily2-Chat-Optimisation"
-    "记忆增强扩展 | https://edgecname.gh-proxy.com/https://github.com/muyoou/st-memory-enhancement.git | HEAD | - | st-memory-enhancement"
-    "上下文消息限制 | https://edgecname.gh-proxy.com/https://github.com/SillyTavern/Extension-MessageLimit.git | - | HEAD | Extension-MessageLimit"
-    "前端 Token 计数 | https://edgecname.gh-proxy.com/https://github.com/GoldenglowMeow/ST-Frontend-Tokenizer.git | - | HEAD | ST-Frontend-Tokenizer"
-    "预设管理器 Momo | https://edgecname.gh-proxy.com/https://github.com/1830488003/preset-manager-momo.git | - | HEAD | preset-manager-momo"
-    "世界书扩展 Momo | https://edgecname.gh-proxy.com/https://github.com/1830488003/my-world-book-momo.git | - | HEAD | my-world-book-momo"
-    "JS 脚本运行器 | https://edgecname.gh-proxy.com/https://github.com/n0vi028/JS-Slash-Runner.git | - | HEAD | JS-Slash-Runner"
-    "Bincooo 执行器 | https://edgecname.gh-proxy.com/https://github.com/bincooo/SillyTavernExtension-JsRunner.git | - | HEAD | SillyTavernExtension-JsRunner"
+    "AIStudioBuildProxy (汉化/API代理) | https://github.com/il1umi/AIStudioBuildProxy.git | server | client | AIStudioBuildProxy"
+    "对话文本着色 | https://github.com/XanadusWorks/SillyTavern-Dialogue-Colorizer.git | - | HEAD | SillyTavern-Dialogue-Colorizer"
+    "顶部信息栏 | https://github.com/SillyTavern/Extension-TopInfoBar.git | - | HEAD | Extension-TopInfoBar"
+    "界面元素隐藏 | https://github.com/uhhhh15/hide.git | - | HEAD | hide"
+    "自定义模型列表 | https://github.com/LenAnderson/SillyTavern-CustomModels.git | - | HEAD | SillyTavern-CustomModels"
+    "聊天统计面板 | https://github.com/Junejulyz/chat-companion-stats.git | - | HEAD | chat-companion-stats"
+    "快速回复 | https://github.com/uhhhh15/QR.git | - | HEAD | QR"
+    "强力快速回复 | https://github.com/AlbusKen/quick-response-force.git | - | HEAD | quick-response-force"
+    "输入辅助助手 | https://github.com/Mooooooon/st-input-helper.git | - | HEAD | st-input-helper"
+    "提示词模板管理 | https://github.com/zonde306/ST-Prompt-Template.git | - | HEAD | ST-Prompt-Template"
+    "消息收藏/星标 | https://github.com/uhhhh15/star.git | - | HEAD | star"
+    "Amily2 聊天优化 | https://github.com/Wx-2025/ST-Amily2-Chat-Optimisation.git | - | HEAD | ST-Amily2-Chat-Optimisation"
+    "记忆增强扩展 | https://github.com/muyoou/st-memory-enhancement.git | HEAD | - | st-memory-enhancement"
+    "上下文消息限制 | https://github.com/SillyTavern/Extension-MessageLimit.git | - | HEAD | Extension-MessageLimit"
+    "前端 Token 计数 | https://github.com/GoldenglowMeow/ST-Frontend-Tokenizer.git | - | HEAD | ST-Frontend-Tokenizer"
+    "预设管理器 Momo | https://github.com/1830488003/preset-manager-momo.git | - | HEAD | preset-manager-momo"
+    "世界书扩展 Momo | https://github.com/1830488003/my-world-book-momo.git | - | HEAD | my-world-book-momo"
+    "JS 脚本运行器 | https://github.com/n0vi028/JS-Slash-Runner.git | - | HEAD | JS-Slash-Runner"
+    "Bincooo 执行器 | https://github.com/bincooo/SillyTavernExtension-JsRunner.git | - | HEAD | SillyTavernExtension-JsRunner"
     "拒绝助手废话 | https://gitgud.io/Monblant/noass.git | - | HEAD | noass"
-    "定时提醒工具 | https://edgecname.gh-proxy.com/https://github.com/Mooooooon/silly-tavern-reminder.git | - | HEAD | silly-tavern-reminder"
-    "生成失败通知 | https://edgecname.gh-proxy.com/https://github.com/RealSubstantiality/fail-notification.git | - | HEAD | fail-notification"
-    "小白盒工具箱 | https://edgecname.gh-proxy.com/https://github.com/RT15548/LittleWhiteBox.git | - | HEAD | LittleWhiteBox"
-    "快捷人格切换 | https://edgecname.gh-proxy.com/https://github.com/SillyTavern/Extension-QuickPersona.git | - | HEAD | Extension-QuickPersona"
-    "聊天记录备份 | https://edgecname.gh-proxy.com/https://github.com/uhhhh15/chat-history-backup.git | - | HEAD | chat-history-backup"
-    "静音/停止生成 | https://edgecname.gh-proxy.com/https://github.com/SillyTavern/Extension-Silence.git | - | HEAD | Extension-Silence"
+    "定时提醒工具 | https://github.com/Mooooooon/silly-tavern-reminder.git | - | HEAD | silly-tavern-reminder"
+    "生成失败通知 | https://github.com/RealSubstantiality/fail-notification.git | - | HEAD | fail-notification"
+    "小白盒工具箱 | https://github.com/RT15548/LittleWhiteBox.git | - | HEAD | LittleWhiteBox"
+    "快捷人格切换 | https://github.com/SillyTavern/Extension-QuickPersona.git | - | HEAD | Extension-QuickPersona"
+    "聊天记录备份 | https://github.com/uhhhh15/chat-history-backup.git | - | HEAD | chat-history-backup"
+    "静音/停止生成 | https://github.com/SillyTavern/Extension-Silence.git | - | HEAD | Extension-Silence"
 )
+
 retry_cmd() {
     local max_attempts=3
     local attempt=1
@@ -62,28 +66,34 @@ retry_cmd() {
     echo -e "${RED}   ❌ 超过最大重试次数。${NC}"
     return 1
 }
-check_for_update() {
-    local check_mirrors=(
-        "https://mirror.ghproxy.com/"
-        "https://ghproxy.net/"
-        "https://ghproxy.cc/"
-        "https://gh.likk.cc/"
-        "https://gh.rs/"
-        "https://edgeone.gh-proxy.com/"
-    )
-    local remote_info=""
-    for mirror in "${check_mirrors[@]}"; do
-        local check_url="${mirror}${SCRIPT_URL_BASE}"
-        remote_info=$(env -u http_proxy -u https_proxy curl -s -L -m 5 "$check_url" | grep "# TAV-X v" | head -n 1)
-        if [[ -n "$remote_info" ]]; then break; fi
-    done
-    if [[ -n "$remote_info" ]]; then
-        local remote_ver=$(echo "$remote_info" | grep -o "v[0-9.]*")
-        if [[ "$remote_ver" != "$CURRENT_VERSION" && -n "$remote_ver" ]]; then
-            NEW_VERSION_AVAILABLE="$remote_ver"
+
+start_update_check_async() {
+    if [ ! -d "$CACHE_DIR" ]; then mkdir -p "$CACHE_DIR"; fi
+    (
+        local check_mirrors=(
+            "https://mirror.ghproxy.com/"
+            "https://ghproxy.net/"
+            "https://ghproxy.cc/"
+            "https://gh.likk.cc/"
+            "https://gh.rs/"
+            "https://edgeone.gh-proxy.com/"
+        )
+        local remote_info=""
+        for mirror in "${check_mirrors[@]}"; do
+            local check_url="${mirror}${SCRIPT_URL_BASE}"
+            remote_info=$(env -u http_proxy -u https_proxy curl -s -f -L -m 5 "$check_url" | grep "# TAV-X v" | head -n 1)
+            if [[ -n "$remote_info" ]]; then break; fi
+        done
+
+        if [[ -n "$remote_info" ]]; then
+            local remote_ver=$(echo "$remote_info" | grep -o "v[0-9.]*")
+            if [[ -n "$remote_ver" && "$remote_ver" != "$CURRENT_VERSION" ]]; then
+                echo "$remote_ver" > "$VERSION_FILE"
+            fi
         fi
-    fi
+    ) > /dev/null 2>&1 &
 }
+
 get_current_config() {
     if [ -f "$PROXY_CONFIG_FILE" ]; then
         echo "PROXY:$(cat "$PROXY_CONFIG_FILE")"
@@ -93,6 +103,7 @@ get_current_config() {
         echo "MIRROR:$DEFAULT_MIRROR"
     fi
 }
+
 ensure_minimal_config() {
     if [ -f "$CONFIG_FILE" ]; then return; fi
     mkdir -p "$(dirname "$CONFIG_FILE")"
@@ -104,6 +115,7 @@ ensure_minimal_config() {
     echo "  enabled: false" >> "$CONFIG_FILE"
     echo "  url: \"\"" >> "$CONFIG_FILE"
 }
+
 auto_setup_alias() {
     SCRIPT_PATH=$(readlink -f "$0")
     RC_FILE="$HOME/.bashrc"
@@ -111,6 +123,7 @@ auto_setup_alias() {
     echo "alias st='bash $SCRIPT_PATH'" >> "$RC_FILE"
     source "$RC_FILE" 2>/dev/null
 }
+
 check_env() {
     auto_setup_alias
     if [ -f "$MIRROR_CONFIG" ]; then
@@ -156,12 +169,21 @@ EOF
     echo -e "${NC}"
     echo -e "${WHITE}   Termux Audio Visual eXperience ${PURPLE}│${CYAN} v${CURRENT_VERSION}${NC}"
     echo -e "${BLUE}────────────────────────────────────────────────────${NC}"
+
+    if [ -f "$VERSION_FILE" ]; then
+        local cached_ver=$(cat "$VERSION_FILE")
+        if [[ -n "$cached_ver" && "$cached_ver" != "$CURRENT_VERSION" ]]; then
+            NEW_VERSION_AVAILABLE="$cached_ver"
+        fi
+    fi
+
     if [[ -n "$NEW_VERSION_AVAILABLE" ]]; then
         echo -e "${YELLOW}🔔 新版本可用: ${NEW_VERSION_AVAILABLE} (当前: ${CURRENT_VERSION})"
         echo -e "   请在菜单选择 [5] 进行更新${NC}"
         echo -e "${BLUE}────────────────────────────────────────────────────${NC}"
     fi
 }
+
 apply_global_optimizations() {
     ensure_minimal_config
     sed -i 's/^enableUserAccounts:[[:space:]]*false/enableUserAccounts: true/' "$CONFIG_FILE"
@@ -169,6 +191,7 @@ apply_global_optimizations() {
     sed -i 's/^useDiskCache:[[:space:]]*true/useDiskCache: false/' "$CONFIG_FILE"
     sed -i 's/^enableDiscreetLogin:[[:space:]]*false/enableDiscreetLogin: true/' "$CONFIG_FILE"
 }
+
 ensure_whitelist_off() {
     ensure_minimal_config
     if grep -q "whitelistMode: true" "$CONFIG_FILE"; then
@@ -176,12 +199,14 @@ ensure_whitelist_off() {
         sleep 0.5
     fi
 }
+
 enable_server_plugins() {
     ensure_minimal_config
     if grep -q "enableServerPlugins: true" "$CONFIG_FILE"; then return; fi
     sed -i 's/^enableServerPlugins:[[:space:]]*false/enableServerPlugins: true/' "$CONFIG_FILE"
     if ! grep -q "enableServerPlugins" "$CONFIG_FILE"; then echo "enableServerPlugins: true" >> "$CONFIG_FILE"; fi
 }
+
 is_plugin_installed() {
     local dir_name=$1
     if [ -d "$INSTALL_DIR/plugins/$dir_name" ] || [ -d "$INSTALL_DIR/public/scripts/extensions/third-party/$dir_name" ]; then
@@ -190,23 +215,21 @@ is_plugin_installed() {
         return 1
     fi
 }
+
 install_plugin_core() {
     local name=$1
     local repo=$2
     local branch_server=$3
     local branch_client=$4
     local dir_name=$5
-    local batch_mode=$6 
+    local batch_mode=$6
 
-    # === [优化] 批量模式下的智能跳过逻辑 ===
     if [ "$batch_mode" == "true" ]; then
-        # 检查是否已安装
         if [ -d "$INSTALL_DIR/plugins/$dir_name" ] || [ -d "$INSTALL_DIR/public/scripts/extensions/third-party/$dir_name" ]; then
             echo -e "${YELLOW}>>> 跳过: $name (已安装)${NC}"
             return 0
         fi
     fi
-    # ========================================
 
     echo -e "${CYAN}>>> 正在安装: $name${NC}"
 
@@ -228,25 +251,16 @@ install_plugin_core() {
 
     exec_git_with_retry() {
         local cmd="$GIT_CMD $@"
-        if [ "$batch_mode" == "true" ]; then
-            # 批量模式下不显示详细报错，只显示结果
-            retry_cmd "$cmd" >/dev/null 2>&1
-        else
-            retry_cmd "$cmd"
-        fi
+        if [ "$batch_mode" == "true" ]; then retry_cmd "$cmd" >/dev/null 2>&1; else retry_cmd "$cmd"; fi
     }
-
     local install_success=false
 
-    # 2. 服务端插件处理
     if [ "$branch_server" != "-" ]; then
         enable_server_plugins
         SERVER_PATH="$INSTALL_DIR/plugins/$dir_name"
-        # 只有在非批量模式，或者确认要安装时才删除旧的（防止误删，虽然上面已经跳过了）
         if [ -d "$SERVER_PATH" ]; then rm -rf "$SERVER_PATH"; fi
         mkdir -p "$INSTALL_DIR/plugins"
         BRANCH_ARG=""; if [ "$branch_server" != "HEAD" ]; then BRANCH_ARG="-b $branch_server"; fi
-
         if exec_git_with_retry $BRANCH_ARG --depth 1 "$TARGET_REPO" "$SERVER_PATH"; then
             if [ "$batch_mode" != "true" ]; then echo -e "${GREEN}   √ 服务端部署成功${NC}"; fi
             install_success=true
@@ -254,15 +268,12 @@ install_plugin_core() {
             if [ "$batch_mode" != "true" ]; then echo -e "${RED}   ❌ 服务端下载失败！${NC}"; fi
         fi
     fi
-
-    # 3. 客户端插件处理
     if [ "$branch_client" != "-" ]; then
         CLIENT_BASE="$INSTALL_DIR/public/scripts/extensions/third-party"
         CLIENT_PATH="$CLIENT_BASE/$dir_name"
         if [ -d "$CLIENT_PATH" ]; then rm -rf "$CLIENT_PATH"; fi
         mkdir -p "$CLIENT_BASE"
         BRANCH_ARG=""; if [ "$branch_client" != "HEAD" ]; then BRANCH_ARG="-b $branch_client"; fi
-
         if exec_git_with_retry $BRANCH_ARG --depth 1 "$TARGET_REPO" "$CLIENT_PATH"; then
             if [ "$batch_mode" != "true" ]; then echo -e "${GREEN}   √ 客户端部署成功${NC}"; fi
             install_success=true
@@ -270,46 +281,28 @@ install_plugin_core() {
             if [ "$batch_mode" != "true" ]; then echo -e "${RED}   ❌ 客户端下载失败！${NC}"; fi
         fi
     fi
-
-    # 批量模式下的简略输出
     if [ "$batch_mode" == "true" ]; then
-        if [ "$install_success" == "true" ]; then
-            echo -e "${GREEN}   ✅ 安装成功${NC}"
-        else
-            echo -e "${RED}   ❌ 安装失败${NC}"
-        fi
+        if [ "$install_success" == "true" ]; then echo -e "${GREEN}   ✅ 安装成功${NC}"; else echo -e "${RED}   ❌ 安装失败${NC}"; fi
     else
-        # 单装模式保持原有交互
-        if [ "$install_success" == "true" ]; then
-            echo -e "${GREEN}🎉 操作结束${NC}"
-        else
-            echo -e "${RED}⚠️  操作结束，请检查上方报错信息${NC}"
-        fi
+        if [ "$install_success" == "true" ]; then echo -e "${GREEN}🎉  操作结束${NC}"; else echo -e "${RED}⚠️  操作结束，请检查上方报错信息${NC}"; fi
         read -p "回车继续..."
     fi
 }
+
 install_all_plugins() {
     echo -e "${CYAN}=== 🚀 正在批量安装所有插件 ===${NC}"
     echo -e "${YELLOW}提示: 已安装的插件将自动跳过。${NC}"
     echo -e "${RED}提示: 按 Ctrl+C 可随时强行停止。${NC}"
     echo "----------------------------------------"
-    
+
     BREAK_LOOP=false
-    
     trap 'BREAK_LOOP=true; echo -e "\n${RED}🛑 检测到中断信号，正在停止...${NC}";' SIGINT
 
     for item in "${PLUGIN_LIST[@]}"; do
-        if [ "$BREAK_LOOP" = true ]; then
-            break
-        fi
-
+        if [ "$BREAK_LOOP" = true ]; then break; fi
         IFS='|' read -r p_name p_repo p_s_branch p_c_branch p_dir <<< "$item"
-        
         install_plugin_core "$(echo "$p_name"|xargs)" "$(echo "$p_repo"|xargs)" "$(echo "$p_s_branch"|xargs)" "$(echo "$p_c_branch"|xargs)" "$(echo "$p_dir"|xargs)" "true"
-        
-        if [ "$BREAK_LOOP" = true ]; then
-            break
-        fi
+        if [ "$BREAK_LOOP" = true ]; then break; fi
     done
 
     trap 'BREAK_LOOP=true' SIGINT
@@ -322,6 +315,7 @@ install_all_plugins() {
     fi
     read -p "回车返回..."
 }
+
 plugin_menu() {
     while true; do
         clear
@@ -344,7 +338,7 @@ plugin_menu() {
         if [[ -z "$p_idx" ]]; then continue; fi
         if [ "$p_idx" == "0" ]; then return; fi
         if [ "$p_idx" == "99" ]; then install_all_plugins; continue; fi
-        if ! [[ "$p_idx" =~ ^[0-9]+$ ]]; then echo -e "${RED}输入 无效${NC}"; sleep 0.5; continue; fi
+        if ! [[ "$p_idx" =~ ^[0-9]+$ ]]; then echo -e "${RED}输入无效${NC}"; sleep 0.5; continue; fi
         real_idx=$((p_idx-1))
         if [ -n "${PLUGIN_LIST[$real_idx]}" ]; then
             IFS='|' read -r p_name p_repo p_s_branch p_c_branch p_dir <<< "${PLUGIN_LIST[$real_idx]}"
@@ -352,16 +346,19 @@ plugin_menu() {
         else echo -e "${RED}无效的选择${NC}"; sleep 1; fi
     done
 }
+
 validate_proxy_format() { if [[ "$1" =~ ^(http|https|socks5|socks5h)://.+ ]]; then return 0; else return 1; fi; }
 test_proxy_connection() {
     echo -e "${YELLOW}>>> 测试代理 ($1)...${NC}"
     if curl -s -o /dev/null --connect-timeout 5 --proxy "$1" https://www.google.com; then return 0; else return 1; fi
 }
+
 get_mirror_status_code() {
     local target="$1"
     local test_url="${target}https://edgecname.gh-proxy.com/https://github.com/SillyTavern/SillyTavern.git/info/refs?service=git-upload-pack"
     env -u http_proxy -u https_proxy curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "$test_url"
 }
+
 select_mirror() {
     clear
     echo -e "${CYAN}=== 🌐 Github 下载线路配置 ===${NC}"
@@ -411,7 +408,6 @@ select_mirror() {
                 if [[ -z "$user_proxy" ]]; then continue; fi
                 if [ "$user_proxy" == "0" ]; then break; fi
                 if ! validate_proxy_format "$user_proxy"; then echo -e "${RED}格式错误${NC}"; continue; fi
-                
                 if test_proxy_connection "$user_proxy"; then
                     sed -i '/^requestProxy:/,/^  bypass:/ s/enabled:[[:space:]]*false/enabled: true/' "$CONFIG_FILE" 2>/dev/null
                     sed -i "/^requestProxy:/,/^  bypass:/ s|^  url:.*|  url: \"$user_proxy\"|" "$CONFIG_FILE" 2>/dev/null
@@ -431,11 +427,9 @@ select_mirror() {
                 read -p "地址 (0 取消): " custom_url
                 if [[ -z "$custom_url" ]]; then continue; fi
                 if [ "$custom_url" == "0" ]; then return; fi
-                
                 if [[ $custom_url == http* ]]; then
                     [[ "${custom_url}" != */ ]] && custom_url="${custom_url}/"
                     code=$(get_mirror_status_code "$custom_url")
-                    
                     if [[ "$code" == "200" || "$code" == "301" || "$code" == "302" ]]; then
                         echo "$custom_url" > "$MIRROR_CONFIG"
                         rm -f "$PROXY_CONFIG_FILE"
@@ -463,6 +457,7 @@ select_mirror() {
     esac
     sleep 1
 }
+
 configure_security_original() {
     if [ ! -f "$CONFIG_FILE" ]; then return; fi
     cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
@@ -471,31 +466,27 @@ configure_security_original() {
     sed -i 's/^enableDiscreetLogin:[[:space:]]*false/enableDiscreetLogin: true/' "$CONFIG_FILE"
     sed -i '/^browserLaunch:/,/^  [a-z]/ s/enabled:[[:space:]]*true/enabled: false/' "$CONFIG_FILE"
 }
+
 reset_password_logic() {
     cd "$INSTALL_DIR" || return
     if [ ! -f "recover.js" ]; then echo -e "${RED}错误：找不到 recover.js${NC}"; read -p "回车返回..."; return; fi
-    
     clear; echo -e "${CYAN}=== 🔐 密码重置 ===${NC}"
     echo -e "${YELLOW}当前已注册用户列表:${NC}"
-    
-    if [ -d "data" ]; then 
+    if [ -d "data" ]; then
         ls -F data/ | grep "/" | grep -v "^_" | sed 's/\///g' | sed 's/^/  - /'
     else
         echo -e "${RED}  (未找到 data 目录)${NC}"
     fi
-    
     echo "------------------------"
     read -p "用户名 [default-user]: " TARGET_USER
     TARGET_USER=${TARGET_USER:-default-user}
-    
     read -p "新密码 [Gemini@12345]: " NEW_PASS
     NEW_PASS=${NEW_PASS:-Gemini@12345}
-    
     echo -e "${CYAN}>>> 正在重置...${NC}"
     node recover.js "$TARGET_USER" "$NEW_PASS"
-    
     echo -e "${GREEN}✅ 操作完成${NC}"; read -p "回车返回..."
 }
+
 security_menu() {
     while true; do
         clear; echo -e "${CYAN}=== 🛠️ 安全配置 ===${NC}"
@@ -505,6 +496,7 @@ security_menu() {
         case $sec_choice in 1) configure_security_original; echo -e "${GREEN}完成${NC}"; sleep 1 ;; 2) reset_password_logic ;; 0) return ;; *) echo -e "${RED}无效输入${NC}"; sleep 0.5 ;; esac
     done
 }
+
 configure_proxy() {
     if [ ! -f "$CONFIG_FILE" ]; then echo -e "${RED}无配置${NC}"; sleep 1; return; fi
     clear; echo -e "${CYAN}=== 代理配置 ===${NC}"
@@ -531,21 +523,24 @@ configure_proxy() {
         *) return ;;
     esac
 }
+
 check_storage_permission() {
     if [ ! -d "$HOME/storage" ]; then
         echo -e "${CYAN}请点击【允许】授权存储访问。${NC}"; termux-setup-storage; sleep 2
-        if [ ! -d "$HOME/storage" ]; then echo -e "${RED}无存储权 限${NC}"; return 1; fi
+        if [ ! -d "$HOME/storage" ]; then echo -e "${RED}无存储权限${NC}"; return 1; fi
     fi
     return 0
 }
+
 perform_backup() {
     check_storage_permission || return
-    if [ ! -d "$INSTALL_DIR/data" ]; then echo -e "${RED}无数据目 录${NC}"; read -p "回车返回..."; return; fi
+    if [ ! -d "$INSTALL_DIR/data" ]; then echo -e "${RED}无数据目录${NC}"; read -p "回车返回..."; return; fi
     mkdir -p "$BACKUP_DIR"; TIMESTAMP=$(date +%Y%m%d_%H%M%S); BACKUP_FILE="$BACKUP_DIR/ST_Backup_$TIMESTAMP.tar.gz"
     echo -e "${CYAN}正在备份...${NC}"; cd "$INSTALL_DIR" || return; tar -czf "$BACKUP_FILE" data
     if [ -f "$BACKUP_FILE" ]; then echo -e "${GREEN}✅ 备份: $(basename "$BACKUP_FILE")${NC}"; else echo -e "${RED}失败${NC}"; fi
     read -p "回车返回..."
 }
+
 perform_restore() {
     check_storage_permission || return
     if [ ! -d "$BACKUP_DIR" ]; then echo -e "${RED}无备份目录${NC}"; read -p "回车返回..."; return; fi
@@ -557,12 +552,13 @@ perform_restore() {
     if [[ -z "$file_idx" ]]; then return; fi
     if [[ "$file_idx" == "0" ]]; then return; fi
     SELECTED_FILE="${files[$((file_idx-1))]}"
-    if [ -z "$SELECTED_FILE" ] || [ ! -f "$SELECTED_FILE" ]; then echo -e "${RED}无效${NC}"; sleep 1; return; fi
+    if [ -z "$SELECTED_FILE" ] || [ ! -f "$SELECTED_FILE" ]; then echo -e "${RED} 无效${NC}"; sleep 1; return; fi
     echo -e "${RED}⚠️  警告: 将覆盖当前数据！${NC}"; read -p "输入 'yes' 确认: " confirm
     if [[ "$confirm" != "yes" ]]; then return; fi
     rm -rf "$INSTALL_DIR/data"; mkdir -p "$INSTALL_DIR/data"; tar -xzf "$SELECTED_FILE" -C "$INSTALL_DIR"
     echo -e "${GREEN}✅ 恢复完成${NC}"; read -p "回车返回..."
 }
+
 backup_menu() {
     while true; do
         clear; echo -e "${CYAN}=== 💾 备份与恢复 ===${NC}"
@@ -576,34 +572,31 @@ backup_menu() {
 run_adb_module() {
     LOCAL_MODULE_DIR="$HOME/.tav_x/modules"
     MODULE_FILE="$LOCAL_MODULE_DIR/adb_keepalive.sh"
-    
     mkdir -p "$LOCAL_MODULE_DIR"
-    
+
     if [ -f "$MODULE_FILE" ]; then
         bash "$MODULE_FILE"
         return
     fi
-    
+
     echo -e "${CYAN}>>> 本地模块缺失，正在从云端拉取...${NC}"
-    
     CONFIG_STR=$(get_current_config)
     TYPE=${CONFIG_STR%%:*}
     VALUE=${CONFIG_STR#*:}
-    
-    RAW_URL="https://edgecname.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/modules/adb_keepalive.sh"
-    
+    RAW_URL="https://raw.githubusercontent.com/Future-404/TAV-X/main/modules/adb_keepalive.sh"
+
     if [ "$TYPE" == "PROXY" ]; then
-        DOWNLOAD_CMD="curl -s -L --proxy $VALUE"
+        DOWNLOAD_CMD="curl -s -f -L --proxy $VALUE"
         FINAL_URL="$RAW_URL"
     else
-        DOWNLOAD_CMD="env -u http_proxy -u https_proxy curl -s -L --noproxy '*'"
+        DOWNLOAD_CMD="env -u http_proxy -u https_proxy curl -s -f -L --noproxy '*'"
         if [[ "$VALUE" == *"raw.githubusercontent.com"* ]]; then
              FINAL_URL="$VALUE"
         else
              FINAL_URL="${VALUE}${RAW_URL}"
         fi
     fi
-    
+
     echo -e "${YELLOW}>>> 正在下载: adb_keepalive.sh ...${NC}"
     if $DOWNLOAD_CMD "$FINAL_URL" -o "${MODULE_FILE}.tmp"; then
         if grep -q "bash" "${MODULE_FILE}.tmp"; then
@@ -623,6 +616,7 @@ run_adb_module() {
         read -p "回车返回..."
     fi
 }
+
 rollback_st() {
     if [ ! -d "$INSTALL_DIR/.git" ]; then
         echo -e "${RED}❌ 目录无效或不是Git仓库，无法回退。${NC}"
@@ -650,7 +644,7 @@ rollback_st() {
     while true; do
         clear
         echo -e "${CYAN}=== 🔙 版本回退时光机 ===${NC}"
-        echo -e "${YELLOW}⚠️  警告: 回退版本可能导致部分新版插件不 兼容。${NC}"
+        echo -e "${YELLOW}⚠️  警告: 回退版本可能导致部分新版插件不兼容。${NC}"
         echo -e "${YELLOW}⚠️  建议在回退前先 [备份数据]。${NC}"
         echo "----------------------------------------"
         mapfile -t tags < <(git tag --sort=-creatordate | grep -v "staging" | head -n 15)
@@ -696,22 +690,27 @@ rollback_st() {
         return
     done
 }
+
 install_st() {
     CONFIG_STR=$(get_current_config)
     TYPE=${CONFIG_STR%%:*}
     VALUE=${CONFIG_STR#*:}
+
     if [ ! -d "$INSTALL_DIR" ]; then
         echo -e "${CYAN}>>> 开始部署...${NC}"
         local SAFE_ENV="env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null"
+        local ST_RAW_URL="https://github.com/SillyTavern/SillyTavern.git"
+
         if [ "$TYPE" == "PROXY" ]; then
             echo -e "${YELLOW}>>> 代理模式: $VALUE${NC}"
             GIT_CMD="$SAFE_ENV git clone --depth 1 -c http.proxy=$VALUE"
-            URL="https://edgecname.gh-proxy.com/https://github.com/SillyTavern/SillyTavern.git"
+            URL="$ST_RAW_URL"
         else
             echo -e "${YELLOW}>>> 镜像模式: $VALUE${NC}"
             GIT_CMD="$SAFE_ENV env -u http_proxy -u https_proxy git clone --depth 1 -c http.proxy="
-            if [[ "$VALUE" == *"https://edgecname.gh-proxy.com/https://github.com"* ]]; then URL="$VALUE"; else URL="${VALUE}https://edgecname.gh-proxy.com/https://github.com/SillyTavern/SillyTavern.git"; fi
+            URL="${VALUE}${ST_RAW_URL}"
         fi
+
         if ! retry_cmd "$GIT_CMD \"$URL\" \"$INSTALL_DIR\""; then
             echo -e "${RED}❌ 下载失败，进入线路选择...${NC}"
             sleep 2
@@ -719,6 +718,7 @@ install_st() {
             install_st
             return
         fi
+
         cd "$INSTALL_DIR" || return
         npm config set registry https://registry.npmmirror.com
         retry_cmd "npm install --no-audit --fund"
@@ -731,6 +731,7 @@ install_st() {
         fi
     fi
 }
+
 update_st() {
     CONFIG_STR=$(get_current_config)
     TYPE=${CONFIG_STR%%:*}
@@ -760,6 +761,7 @@ update_st() {
     retry_cmd "npm install --no-audit --fund"
     echo -e "${GREEN}完成${NC}"; read -p "回车返回..."
 }
+
 update_script() {
     echo -e "${CYAN}>>> 正在更新 TAV-X 脚本...${NC}"
     SCRIPT_PATH=$(readlink -f "$0")
@@ -767,10 +769,10 @@ update_script() {
     TYPE=${CONFIG_STR%%:*}
     VALUE=${CONFIG_STR#*:}
     if [ "$TYPE" == "PROXY" ]; then
-        DOWNLOAD_CMD="curl -s -L --proxy $VALUE"
+        DOWNLOAD_CMD="curl -s -f -L --proxy $VALUE"
         URL="$SCRIPT_URL_BASE"
     else
-        DOWNLOAD_CMD="env -u http_proxy -u https_proxy curl -s -L --noproxy '*'"
+        DOWNLOAD_CMD="env -u http_proxy -u https_proxy curl -s -f -L --noproxy '*'"
         if [[ "$VALUE" == *"raw.githubusercontent.com"* ]]; then
              URL="$VALUE"
         else
@@ -793,6 +795,7 @@ update_script() {
     echo -e "${RED}❌ 脚本下载失败，请检查网络。${NC}"
     read -p "回车返回..."
 }
+
 update_menu() {
     while true; do
         clear
@@ -813,6 +816,7 @@ update_menu() {
         esac
     done
 }
+
 stop_services() {
     pkill -f "node server.js"
     pkill -f "cloudflared"
@@ -821,12 +825,14 @@ stop_services() {
     rm -f "$SERVER_LOG"
     echo -e "${YELLOW}🛑 服务已停止，缓存日志已清理。${NC}"
 }
+
 start_server_background() {
     stop_services; termux-wake-lock
     cd "$INSTALL_DIR" || exit
     echo -e "${CYAN}>>> 启动服务...${NC}"
     setsid nohup node server.js > "$SERVER_LOG" 2>&1 &
 }
+
 start_share() {
     ensure_whitelist_off
     start_server_background
@@ -835,11 +841,13 @@ start_share() {
     setsid nohup cloudflared tunnel --protocol http2 --url http://127.0.0.1:8000 --no-autoupdate >> "$CF_LOG" 2>&1 &
     echo -e "${GREEN}✅ 远程服务已启动！正在获取链接...${NC}"; sleep 3
 }
+
 start_local() {
     start_server_background
     rm -f "$CF_LOG"
     echo -e "${GREEN}✅ 本地模式已启动！${NC}"; sleep 1.5
 }
+
 view_logs() {
     clear
     echo -e "${CYAN}=== 实时日志 (按 Ctrl+C 返回菜单) ===${NC}"
@@ -853,7 +861,9 @@ view_logs() {
         read -p "按回车返回..."
     fi
 }
+
 exit_script() { exec bash; }
+
 show_menu() {
     while true; do
         BREAK_LOOP=false; clear; print_banner
@@ -894,7 +904,8 @@ show_menu() {
         esac
     done
 }
-check_for_update
+
+start_update_check_async
 check_env
 auto_setup_alias
 send_analytics

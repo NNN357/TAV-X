@@ -16,14 +16,12 @@ BANNER
     echo -e "${BLUE}────────────────────────────────────────────────────${NC}"
 }
 
-# --- 交互提示 ---
 pause() {
     echo ""
     read -n 1 -s -r -p "按任意键继续..."
     echo ""
 }
 
-# --- 简单的命令重试器 ---
 retry_cmd() {
     local max_attempts=3
     local attempt=1

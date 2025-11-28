@@ -4,11 +4,9 @@
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/utils.sh"
 source "$TAVX_DIR/core/deps.sh"
-# 预加载模块
 source "$TAVX_DIR/core/install.sh"
 source "$TAVX_DIR/core/launcher.sh"
 
-# 自动检查环境
 check_dependencies
 
 while true; do
@@ -43,7 +41,6 @@ while true; do
             install_sillytavern 
             ;;
         3)
-            # 工具箱逻辑
             while true; do
                 header "工具箱"
                 echo -e "  1. 🛡️  ADB 保活 (ADB Keepalive)"

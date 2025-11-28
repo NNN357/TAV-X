@@ -12,11 +12,10 @@ stop_services() {
     pkill -f "node server.js"
     pkill -f "cloudflared"
     termux-wake-unlock 2>/dev/null
-    # 注意：不删除日志，方便调试查看
     info "服务已停止。"
 }
 
-# --- 智能获取链接 ---
+# --- 获取链接 ---
 wait_for_link() {
     info "正在请求 Cloudflare 边缘节点 (超时 15s)..."
     local attempt=1
@@ -24,7 +23,6 @@ wait_for_link() {
     local link=""
 
     while [ $attempt -le $max_attempts ]; do
-        # 尝试提取链接
         if [ -f "$CF_LOG" ]; then
             link=$(grep -o "https://[-a-zA-Z0-9]*\.trycloudflare\.com" "$CF_LOG" | tail -n 1)
         fi
@@ -55,8 +53,8 @@ wait_for_link() {
 view_logs_menu() {
     while true; do
         header "日志监控中心"
-        echo -e "  1. 📜 酒馆运行日志 (Server Log)"
-        echo -e "  2. 🚇 穿透隧道日志 (Tunnel Log) <--- 查看报错/链接"
+        echo -e "  1. 📜 酒馆运行日志"
+        echo -e "  2. 🚇 穿透隧道日志"
         echo -e "  0. 返回"
         echo ""
         read -p "选择: " log_c
@@ -73,7 +71,6 @@ view_logs_menu() {
             2)
                 if [ -f "$CF_LOG" ]; then
                     clear; echo -e "${CYAN}--- 按 Ctrl+C 退出监控 ---${NC}"
-                    # 显示整个文件内容，方便看报错，然后持续监控
                     cat "$CF_LOG"
                     echo -e "\n${YELLOW}--- 实时监控中 ---${NC}"
                     tail -n 10 -f "$CF_LOG"
@@ -93,7 +90,6 @@ start_menu() {
     while true; do
         header "启动中心"
         
-        # 简单的运行状态指示
         if pgrep -f "cloudflared" >/dev/null; then
             STATUS_MSG="${GREEN}● 穿透运行中${NC}"
         elif pgrep -f "node server.js" >/dev/null; then
@@ -104,10 +100,10 @@ start_menu() {
         echo -e "当前状态: $STATUS_MSG"
         echo ""
 
-        echo -e "  1. 🏠 本地模式 (Local) - 仅本机"
-        echo -e "  2. 🌍 远程穿透 (Remote) - 生成链接"
-        echo -e "  3. 🔍 重新获取链接 (Re-check Link)"
-        echo -e "  4. 📜 日志监控 (Logs)"
+        echo -e "  1. 🏠 本地模式 - 仅本机"
+        echo -e "  2. 🌍 远程穿透 - 生成链接"
+        echo -e "  3. 🔍 重新获取链接"
+        echo -e "  4. 📜 日志监控"
         echo -e "  5. 🛑 停止所有服务"
         echo -e "  0. 返回"
         echo ""
@@ -135,15 +131,14 @@ start_menu() {
                 nohup node server.js > "$SERVER_LOG" 2>&1 &
                 sleep 2
                 
-                # 启动 CF (不更新，使用 http2 协议)
+                # 启动 CF
                 nohup cloudflared tunnel --protocol http2 --url http://127.0.0.1:8000 --no-autoupdate > "$CF_LOG" 2>&1 &
                 
-                # 进入智能等待
+                # 智能等待
                 wait_for_link
                 pause
                 ;;
             3)
-                # 不重启服务，仅尝试从日志捞取链接
                 wait_for_link
                 pause
                 ;;

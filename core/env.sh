@@ -21,8 +21,7 @@ success() { echo -e "${GREEN}[DONE]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# --- 核心函数: 上下文导出 (供子模块使用) ---
-# 将当前环境导出到临时文件，供 modules 独立脚本 source
+# --- 核心函数: 上下文导出 ---
 export_env_context() {
     cat > /tmp/tavx_env.sh << EOL
 export TAVX_ROOT="$TAVX_ROOT"

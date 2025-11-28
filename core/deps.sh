@@ -2,7 +2,6 @@
 # TAV-X Core: Dependency Manager
 
 check_dependencies() {
-    # 如果已检查过，跳过 (简单的缓存机制)
     if [ "$DEPS_CHECKED" == "true" ]; then return 0; fi
 
     local MISSING_PKGS=""

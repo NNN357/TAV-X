@@ -21,9 +21,8 @@ install_sillytavern() {
         success "旧版本已备份。"
     fi
 
-    # 2. 线路选择 (暂时简化，后续对接 Cloudflare 竞速)
+    # 2. 线路选择
     echo -e "正在拉取代码..."
-    # 默认使用加速镜像
     local MIRROR="https://gh-proxy.com/"
     git clone --depth 1 "${MIRROR}https://github.com/SillyTavern/SillyTavern.git" "$INSTALL_DIR"
 

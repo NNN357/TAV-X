@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Core: Main Logic (V5.0 Final)
+# TAV-X Core: Main Logic (V6.0 Hot-Reload UI)
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
@@ -14,6 +14,9 @@ source "$TAVX_DIR/core/launcher.sh"
 source "$TAVX_DIR/modules/clewd.sh"
 
 check_dependencies
+
+source "$TAVX_DIR/core/ui.sh"
+
 check_for_updates
 send_analytics
 
@@ -70,6 +73,7 @@ while true; do
             case "$SUB" in
                 *"ClewdR"*) clewd_menu ;;
                 *"ADB"*) bash "$TAVX_DIR/modules/adb_keepalive.sh" ;;
+                *"返回"*) ;;
             esac ;;
         *"退出程序") ui_print info "再见！"; exit 0 ;;
         *) exit 0 ;;

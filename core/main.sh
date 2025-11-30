@@ -1,9 +1,12 @@
 #!/bin/bash
-# TAV-X Core: Main Logic (V6.1 Uninstall Module Linked)
+# TAV-X Core: Main Logic (V6.2 Final Clean)
 
+# 1. 加载核心环境与工具
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
 source "$TAVX_DIR/core/utils.sh"
+
+# 2. 加载功能模块
 source "$TAVX_DIR/core/deps.sh"
 source "$TAVX_DIR/core/security.sh"
 source "$TAVX_DIR/core/plugins.sh"
@@ -14,14 +17,14 @@ source "$TAVX_DIR/core/launcher.sh"
 source "$TAVX_DIR/core/uninstall.sh"
 source "$TAVX_DIR/modules/clewd.sh"
 
+# 3. 初始化检查
 check_dependencies
-
-source "$TAVX_DIR/core/ui.sh"
-
 check_for_updates
 send_analytics
 
+# 4. 主循环
 while true; do
+    # --- 状态刷新 ---
     if [ -d "$INSTALL_DIR" ]; then ST_STATUS="${GREEN}已安装${NC}"; else ST_STATUS="${YELLOW}未安装${NC}"; fi
     S_ST=0; S_CF=0; S_ADB=0
     pgrep -f "node server.js" >/dev/null && S_ST=1
@@ -45,7 +48,8 @@ while true; do
         fi
     fi
 
-    ui_header "" 
+    # --- 渲染界面 ---
+    ui_header ""
     ui_dashboard "$S_ST" "$S_CF" "$S_ADB" "$NET_DL" "$NET_API"
 
     OPT_UPD="🔄 安装与更新"
@@ -54,10 +58,11 @@ while true; do
     CHOICE=$(ui_menu "功能导航" \
         "🚀 启动服务" \
         "$OPT_UPD" \
-        "⚙️  系统设置" \
+        "⚙️ 系统设置" \
         "🧩 插件管理" \
+        "🌐 网络设置" \
         "💾 备份与恢复" \
-        "🛠️  高级工具" \
+        "🛠️ 高级工具" \
         "🚪 退出程序"
     )
 
@@ -67,12 +72,13 @@ while true; do
         *"安装与更新"*) update_center_menu ;;
         *"系统设置") security_menu ;;
         *"插件管理") plugin_menu ;;
+        *"网络设置") configure_download_network ;; # 修正调用
         *"备份与恢复") backup_menu ;;
         *"高级工具")
             SUB=$(ui_menu "高级工具箱" "🦀 ClewdR 管理" "🛡️ ADB 保活" "🔙 返回上级")
             case "$SUB" in
                 *"ClewdR"*) clewd_menu ;;
-                *"ADB"*) bash "$TAVX_DIR/modules/adb_keepalive.sh" ;;
+                *"ADB"*) source "$TAVX_DIR/modules/adb_keepalive.sh"; adb_menu_loop ;;
                 *"返回"*) ;;
             esac ;;
         *"退出程序") ui_print info "再见！"; exit 0 ;;

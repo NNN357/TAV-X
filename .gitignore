@@ -6,3 +6,6 @@ node_modules/
 SillyTavern/
 data/
 config.yaml
+config/network.conf
+.temp_link
+.update_available

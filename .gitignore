@@ -9,3 +9,10 @@ config.yaml
 config/network.conf
 .temp_link
 .update_available
+.plugin_map
+.api_res
+
+# 🟢 新增：忽略运行时生成的模块数据目录
+modules/clewdr/
+clewdr/
+temp_restore/

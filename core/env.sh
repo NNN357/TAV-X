@@ -1,7 +1,10 @@
 #!/bin/bash
 # TAV-X Core: Environment Context & Global Config
 
-export TAVX_ROOT="$HOME/.tav_x"
+export TAVX_DIR="${TAVX_DIR:-$HOME/.tav_x}"
+
+export TAVX_ROOT="$TAVX_DIR"
+
 export INSTALL_DIR="$HOME/SillyTavern"
 export CONFIG_FILE="$INSTALL_DIR/config.yaml"
 export CONFIG_DIR="$TAVX_DIR/config"

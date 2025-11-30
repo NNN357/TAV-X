@@ -26,6 +26,7 @@ MIRRORS=(
 )
 
 TARGET_REPO="Future-404/TAV-X.git"
+# 🟢 修改点：路径改为与 st.sh 一致的隐藏目录
 INSTALL_DIR="$HOME/.tav_x"
 BEST_URL=""
 MIN_TIME=9999
@@ -66,11 +67,13 @@ fi
 
 echo -e "${GREEN}>>> 选中最佳线路: ${BEST_URL}${NC}"
 
+# 3. 清理旧版本
 if [ -d "$INSTALL_DIR" ]; then
     echo -e "${YELLOW}>>> 清理旧版本...${NC}"
     rm -rf "$INSTALL_DIR"
 fi
 
+# 4. 克隆仓库
 echo -e "${GREEN}>>> 开始下载 TAV-X (v2.0-beta)...${NC}"
 if git clone --depth 1 -b v2.0-beta "${BEST_URL}" "$INSTALL_DIR"; then
     echo -e "${GREEN}✅ 下载成功${NC}"
@@ -79,11 +82,15 @@ else
     exit 1
 fi
 
+# 5. 配置环境
 if [ -f "$INSTALL_DIR/st.sh" ]; then
     chmod +x "$INSTALL_DIR/st.sh"
     
+    # 智能设置 Alias (指向隐藏目录)
     sed -i '/^alias st=/d' "$HOME/.bashrc"
     echo "alias st='bash $INSTALL_DIR/st.sh'" >> "$HOME/.bashrc"
+
+    export PATH="$INSTALL_DIR:$PATH"
 
     echo ""
     echo -e "${GREEN}================================================${NC}"

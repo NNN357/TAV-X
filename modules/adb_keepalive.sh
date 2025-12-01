@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Module: ADB Keep-Alive (UI v4.0 Final)
+# TAV-X Module: ADB Keep-Alive (V3.1 Proxy-Only & UI v4.0)
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
@@ -7,11 +7,47 @@ source "$TAVX_DIR/core/utils.sh"
 
 PKG="com.termux"
 LOG_FILE="$TAVX_DIR/adb_log.txt"
+ADB_INSTALL_DIR="$TAVX_DIR/adb_tools"
+ADB_URL="https://dl.google.com/android/repository/platform-tools-latest-linux.zip"
 
 check_dependency() {
-    if ! command -v adb &> /dev/null; then
-        ui_print warn "正在安装 android-tools..."
-        pkg install android-tools termux-tools -y >/dev/null 2>&1
+    if command -v adb &> /dev/null; then return 0; fi
+    
+    if [ -f "$ADB_INSTALL_DIR/platform-tools/adb" ]; then
+        export PATH="$ADB_INSTALL_DIR/platform-tools:$PATH"
+        return 0
+    fi
+
+    ui_header "ADB 组件安装"
+    ui_print warn "未检测到 ADB，准备安装..."
+    
+    mkdir -p "$ADB_INSTALL_DIR"
+    local ZIP_FILE="$ADB_INSTALL_DIR/platform-tools.zip"
+    
+    local DL_CMD="source \"$TAVX_DIR/core/utils.sh\"; download_file_proxy_only '$ADB_URL' '$ZIP_FILE'"
+    
+    if ui_spinner "正在下载 Platform Tools (Google)..." "$DL_CMD"; then
+        ui_spinner "解压配置中..." "unzip -o '$ZIP_FILE' -d '$ADB_INSTALL_DIR' >/dev/null"
+        
+        local bin_path="$ADB_INSTALL_DIR/platform-tools"
+        chmod +x "$bin_path/adb"
+        export PATH="$bin_path:$PATH"
+        
+        if ! grep -q "platform-tools" "$HOME/.bashrc"; then
+            echo "export PATH=\"$bin_path:\$PATH\"" >> "$HOME/.bashrc"
+        fi
+        
+        rm -f "$ZIP_FILE"
+        ui_print success "ADB 安装成功！"
+    else
+        ui_print error "下载失败。"
+        echo -e "${YELLOW}提示: 此文件位于 Google 服务器。${NC}"
+        echo -e "${YELLOW}建议开启 VPN (代理)，脚本会自动识别并加速。${NC}"
+        if ui_confirm "尝试使用 Termux 软件源安装？(备选方案)"; then
+            pkg install android-tools -y
+        else
+            return 1
+        fi
     fi
 }
 
@@ -83,7 +119,7 @@ apply_keepalive() {
     ui_pause
 }
 
-# --- 新增：撤销权限 ---
+# --- 撤销权限 ---
 revoke_permissions() {
     ui_header "释放资源与权限"
     if ! check_adb_status; then ui_print error "ADB 未连接。"; ui_pause; return; fi
@@ -106,10 +142,7 @@ revoke_permissions() {
     ui_pause
 }
 
-# --- 菜单循环 (修正版) ---
-# 注意：这里我们不写 while true，而是定义成函数供 main.sh 调用
-# 如果直接运行此脚本，则在底部调用函数
-
+# --- 菜单循环 ---
 adb_menu_loop() {
     check_dependency
     while true; do
@@ -134,12 +167,11 @@ adb_menu_loop() {
             *"配对"*) pair_device ;;
             *"保活"*) apply_keepalive ;;
             *"释放"*) revoke_permissions ;;
-            *"返回"*) return ;; # 关键：使用 return 而不是 exit
+            *"返回"*) return ;;
         esac
     done
 }
 
-# 如果是被 source 调用的，不自动执行；如果是直接执行的，则运行
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     adb_menu_loop
 fi

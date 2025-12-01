@@ -51,11 +51,11 @@ while true; do
     CHOICE=$(ui_menu "功能导航" \
         "🚀 启动服务" \
         "$OPT_UPD" \
-        "⚙️ 系统设置" \
+        "⚙️  系统设置" \
         "🧩 插件管理" \
         "🌐 网络设置" \
         "💾 备份与恢复" \
-        "🛠️ 高级工具" \
+        "🛠️  高级工具" \
         "🚪 退出程序"
     )
 
@@ -65,10 +65,10 @@ while true; do
         *"安装与更新"*) update_center_menu ;;
         *"系统设置") security_menu ;;
         *"插件管理") plugin_menu ;;
-        *"网络设置") configure_download_network ;; # 修正调用
+        *"网络设置") configure_download_network ;;
         *"备份与恢复") backup_menu ;;
         *"高级工具")
-            SUB=$(ui_menu "高级工具箱" "🦀 ClewdR 管理" "🛡️ ADB 保活" "🔙 返回上级")
+            SUB=$(ui_menu "高级工具箱" "🦀 ClewdR 管理" "🛡️  ADB 保活" "🔙 返回上级")
             case "$SUB" in
                 *"ClewdR"*) clewd_menu ;;
                 *"ADB"*) source "$TAVX_DIR/modules/adb_keepalive.sh"; adb_menu_loop ;;

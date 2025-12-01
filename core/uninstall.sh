@@ -81,7 +81,7 @@ full_wipe() {
     echo -e "  1. 删除 SillyTavern 所有数据"
     echo -e "  2. 删除 ClewdR 模块"
     echo -e "  3. 删除 TAV-X 脚本及配置"
-    echo -e "  4. 清理环境变量 (.bashrc)"
+    echo -e "  4. 清理环境变量"
     echo ""
     
     if ! verify_kill_switch; then return; fi
@@ -99,7 +99,7 @@ full_wipe() {
     ui_print success "业务数据已清除。"
     echo ""
     echo -e "${YELLOW}最后一步：自毁程序启动...${NC}"
-    echo -e "感谢您的使用，再见！👋"
+    echo -e "别让虚拟的温柔，偷走了你在现实里本该拥有的温暖。再见！👋"
     sleep 2
     
     rm -rf "$TAVX_DIR"
@@ -115,7 +115,7 @@ uninstall_menu() {
         echo ""
         
         CHOICE=$(ui_menu "请选择操作" \
-            "🗑️ 卸载 SillyTavern" \
+            "🗑️  卸载 SillyTavern" \
             "🦀 卸载 ClewdR 模块" \
             "📦 卸载环境依赖" \
             "💥 一键彻底毁灭(全清)" \

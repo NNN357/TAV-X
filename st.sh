@@ -1,7 +1,6 @@
 #!/bin/bash
 # TAV-X Bootstrapper & Migrator (Universal)
 
-# --- 1. 智能定位真实路径 ---
 SOURCE=${BASH_SOURCE[0]}
 while [ -L "$SOURCE" ]; do
   DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
@@ -10,15 +9,12 @@ while [ -L "$SOURCE" ]; do
 done
 export TAVX_DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
 
-# --- 2. 核心校验与启动 ---
 CORE_FILE="$TAVX_DIR/core/main.sh"
 
 if [ -f "$CORE_FILE" ]; then
-    # ✅ 完整性校验通过，启动 v2.0
     chmod +x "$CORE_FILE" "$TAVX_DIR"/core/*.sh "$TAVX_DIR"/modules/*.sh 2>/dev/null
     exec bash "$CORE_FILE"
 else
-    # 🚨 救援模式 (针对 V1 老用户或损坏环境)
     clear
     RED='\033[0;31m'
     GREEN='\033[0;32m'
@@ -46,8 +42,6 @@ EOF
     echo -e "按 ${RED}回车键 (Enter)${NC} 开始自动修复/升级..."
     read -r
 
-    # 调用 Cloudflare 安装器进行无缝迁移
-    # 使用 curl -L 确保跟随重定向
     INSTALLER_URL="https://tav-x.future404.qzz.io"
     
     echo -e "${YELLOW}>>> 正在连接云端安装器...${NC}"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Core: Plugin Manager (UI v4.2 Validation Fix)
+# TAV-X Core: Plugin Manager (V3.0 Smart Network)
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
@@ -24,17 +24,18 @@ install_single_plugin() {
     local TASKS=""
     if [ "$s" != "-" ]; then
         local b_arg=""; [ "$s" != "HEAD" ] && b_arg="-b $s"
-        TASKS+="mkdir -p '$INSTALL_DIR/plugins'; rm -rf '$INSTALL_DIR/plugins/$dir'; git_clone_smart '$b_arg' '$repo' '$INSTALL_DIR/plugins/$dir' || exit 1;"
+        TASKS+="rm -rf '$INSTALL_DIR/plugins/$dir'; git_clone_smart '$b_arg' '$repo' '$INSTALL_DIR/plugins/$dir' || exit 1;"
     fi
     if [ "$c" != "-" ]; then
         local b_arg=""; [ "$c" != "HEAD" ] && b_arg="-b $c"
-        TASKS+="mkdir -p '$INSTALL_DIR/public/scripts/extensions/third-party'; rm -rf '$INSTALL_DIR/public/scripts/extensions/third-party/$dir'; git_clone_smart '$b_arg' '$repo' '$INSTALL_DIR/public/scripts/extensions/third-party/$dir' || exit 1;"
+        TASKS+="rm -rf '$INSTALL_DIR/public/scripts/extensions/third-party/$dir'; git_clone_smart '$b_arg' '$repo' '$INSTALL_DIR/public/scripts/extensions/third-party/$dir' || exit 1;"
     fi
     
-    local WRAP_CMD="source $TAVX_DIR/core/utils.sh; $TASKS"
-    if ui_spinner "正在下载插件 (自动优选)..." "$WRAP_CMD"; then
+    local WRAP_CMD="source \"$TAVX_DIR/core/utils.sh\"; $TASKS"
+    
+    if ui_spinner "正在下载插件 (智能优选)..." "$WRAP_CMD"; then
         ui_print success "安装完成！"
-        [ -f "$CONFIG_FILE" ] && sed -i 's/^enableServerPlugins:[[:space:]]*false/enableServerPlugins: true/' "$CONFIG_FILE"
+        config_set enableServerPlugins true
     else
         ui_print error "安装失败，请检查网络。"
     fi
@@ -117,7 +118,18 @@ submit_plugin() {
     
     local JSON=$(printf '{"name":"%s", "url":"%s", "dirName":"%s"}' "$name" "$url" "$dir")
     
-    if ui_spinner "正在提交..." "curl -s -X POST -H 'Content-Type: application/json' -d '$JSON' '$API_URL/submit' > $TAVX_DIR/.api_res"; then
+    _auto_heal_network_config
+    local network_conf="$TAVX_DIR/config/network.conf"
+    local proxy_args=""
+    if [ -f "$network_conf" ]; then
+        local c=$(cat "$network_conf")
+        if [[ "$c" == PROXY* ]]; then
+            local val=${c#*|}; val=$(echo "$val"|tr -d '\n\r')
+            proxy_args="-x $val"
+        fi
+    fi
+    
+    if ui_spinner "正在提交..." "curl -s $proxy_args -X POST -H 'Content-Type: application/json' -d '$JSON' '$API_URL/submit' > $TAVX_DIR/.api_res"; then
         RES=$(cat "$TAVX_DIR/.api_res")
         if echo "$RES" | grep -q "success"; then
             ui_print success "提交成功！请等待审核。"
@@ -125,7 +137,7 @@ submit_plugin() {
             ui_print error "提交失败: $RES"
         fi
     else
-        ui_print error "连接 API 失败"
+        ui_print error "连接 API 失败，请检查网络。"
     fi
     ui_pause
 }
@@ -133,7 +145,7 @@ submit_plugin() {
 plugin_menu() {
     while true; do
         ui_header "插件生态中心"
-        CHOICE=$(ui_menu "请选择" "📥 安装插件 (Repository)" "➕ 提交插件 (Submit)" "🔙 返回主菜单")
+        CHOICE=$(ui_menu "请选择" "📥 安装插件" "➕ 提交插件" "🔙 返回主菜单")
         case "$CHOICE" in
             *"安装"*) list_install_menu ;;
             *"提交"*) submit_plugin ;;

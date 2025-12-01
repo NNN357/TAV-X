@@ -1,18 +1,24 @@
-.DS_Store
-*.log
-*.bak
-*.tmp
-node_modules/
+# --- 运行时生成的目录 (Runtime) ---
+clewdr/
+adb_tools/
 SillyTavern/
-data/
-config.yaml
-config/network.conf
+node_modules/
+
+# --- 临时文件与日志 (Logs & Temp) ---
+*.log
+*.txt
 .temp_link
 .update_available
+.tag_cache
 .plugin_map
 .api_res
+secrets.env
 
-# 🟢 新增：忽略运行时生成的模块数据目录
-modules/clewdr/
-clewdr/
-temp_restore/
+# --- 用户配置文件 (User Config) ---
+config/network.conf
+config/memory.conf
+config/plugins.list
+
+# --- 系统垃圾 (System) ---
+.DS_Store
+Thumbs.db

@@ -12,7 +12,6 @@ node_modules/
 secrets.env
 config/network.conf
 config/memory.conf
-config/plugins.list
 .DS_Store
 Thumbs.db
 *.swp

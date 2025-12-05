@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Core: Dependency Manager (V3.0 UI Unified)
+# TAV-X Core: Dependency Manager
 
 source "$TAVX_DIR/core/ui.sh"
 

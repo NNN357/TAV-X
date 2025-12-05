@@ -9,6 +9,7 @@ node_modules/
 .tag_cache
 .plugin_map
 .api_res
+.mirror_cache
 secrets.env
 config/network.conf
 config/memory.conf
@@ -23,3 +24,9 @@ config/*.env
 config/cf_token
 gemini_proxy/
 gemini_proxy/*.log
+__pycache__/
+*.py[cod]
+oauth_creds.json
+client_secret.json
+.DS_Store
+Thumbs.db

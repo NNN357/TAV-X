@@ -54,6 +54,27 @@ uninstall_clewd() {
     ui_pause
 }
 
+uninstall_gemini() {
+    local GEMINI_DIR="$TAVX_DIR/gemini_proxy"
+    ui_header "卸载 Gemini 代理"
+    
+    if [ ! -d "$GEMINI_DIR" ]; then
+        ui_print warn "未检测到 Gemini 模块。"
+        ui_pause; return
+    fi
+
+    if ! verify_kill_switch; then return; fi
+    
+    pkill -f "run.py"
+    
+    if ui_spinner "正在清除 Gemini 模块..." "source \"$TAVX_DIR/core/utils.sh\"; safe_rm '$GEMINI_DIR'"; then
+        ui_print success "Gemini 代理及凭据已卸载。"
+    else
+        ui_print error "删除失败。"
+    fi
+    ui_pause
+}
+
 uninstall_adb() {
     local ADB_DIR="$TAVX_DIR/adb_tools"
     ui_header "卸载 ADB 组件"
@@ -113,7 +134,7 @@ full_wipe() {
     echo -e "${RED}危险等级：⭐⭐⭐⭐⭐${NC}"
     echo -e "此操作将执行以下所有动作："
     echo -e "  1. 删除 SillyTavern 所有数据"
-    echo -e "  2. 删除 ClewdR、ADB 等扩展模块"
+    echo -e "  2. 删除 ClewdR、Gemini、ADB 等扩展模块"
     echo -e "  3. 删除 TAV-X 脚本及配置"
     echo -e "  4. 清理环境变量 (.bashrc)"
     echo ""
@@ -123,11 +144,13 @@ full_wipe() {
     pkill -f "node server.js"
     pkill -f "cloudflared"
     pkill -f "clewdr"
+    pkill -f "run.py"
     
     ui_spinner "正在执行清理..." "
         source \"$TAVX_DIR/core/utils.sh\"
         safe_rm '$INSTALL_DIR'
         safe_rm '$TAVX_DIR/clewdr'
+        safe_rm '$TAVX_DIR/gemini_proxy'
         safe_rm '$TAVX_DIR/adb_tools'
         sed -i '/alias st=/d' '$HOME/.bashrc'
         sed -i '/adb_tools\/platform-tools/d' '$HOME/.bashrc'
@@ -152,6 +175,7 @@ uninstall_menu() {
         CHOICE=$(ui_menu "请选择操作" \
             "🗑️ 卸载 SillyTavern" \
             "🦀 卸载 ClewdR 模块" \
+            "♊ 卸载 Gemini 模块" \
             "🤖 卸载 ADB 组件" \
             "📦 卸载环境依赖" \
             "💥 一键彻底毁灭(全清)" \
@@ -161,6 +185,7 @@ uninstall_menu() {
         case "$CHOICE" in
             *"SillyTavern"*) uninstall_st ;;
             *"ClewdR"*) uninstall_clewd ;;
+            *"Gemini"*) uninstall_gemini ;;
             *"ADB"*) uninstall_adb ;;
             *"环境依赖"*) uninstall_deps ;;
             *"彻底毁灭"*) full_wipe ;;

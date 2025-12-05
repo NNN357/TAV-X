@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Core: Update Center (V3.4 Branch Unlock Fix)
+# TAV-X Core: Update Center
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"

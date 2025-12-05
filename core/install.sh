@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Core: Installer (V3.1 Interactive NPM)
+# TAV-X Core: Installer
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"

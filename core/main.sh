@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Core: Main Logic (V6.2 Final Clean)
+# TAV-X Core: Main Logic
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
@@ -12,19 +12,18 @@ source "$TAVX_DIR/core/updater.sh"
 source "$TAVX_DIR/core/install.sh"
 source "$TAVX_DIR/core/launcher.sh"
 source "$TAVX_DIR/core/uninstall.sh"
-source "$TAVX_DIR/modules/clewd.sh"
 
 check_dependencies
 check_for_updates
 send_analytics
 
 while true; do
-    if [ -d "$INSTALL_DIR" ]; then ST_STATUS="${GREEN}已安装${NC}"; else ST_STATUS="${YELLOW}未安装${NC}"; fi
-    S_ST=0; S_CF=0; S_ADB=0
+    S_ST=0; S_CF=0; S_ADB=0; S_CLEWD=0; S_GEMINI=0
     pgrep -f "node server.js" >/dev/null && S_ST=1
     pgrep -f "cloudflared" >/dev/null && S_CF=1
     command -v adb &>/dev/null && adb devices 2>/dev/null | grep -q "device$" && S_ADB=1
-
+    pgrep -f "clewd" >/dev/null && S_CLEWD=1
+    pgrep -f "run.py" >/dev/null && S_GEMINI=1
     NET_DL="自动优选"
     if [ -f "$NETWORK_CONFIG" ]; then
         CONF=$(cat "$NETWORK_CONFIG"); TYPE=${CONF%%|*}; VAL=${CONF#*|}
@@ -43,7 +42,8 @@ while true; do
     fi
 
     ui_header ""
-    ui_dashboard "$S_ST" "$S_CF" "$S_ADB" "$NET_DL" "$NET_API"
+    
+    ui_dashboard "$S_ST" "$S_CF" "$S_ADB" "$NET_DL" "$NET_API" "$S_CLEWD" "$S_GEMINI"
 
     OPT_UPD="🔄 安装与更新"
     [ -f "$TAVX_DIR/.update_available" ] && OPT_UPD="🔄 安装与更新 🔔"
@@ -68,9 +68,14 @@ while true; do
         *"网络设置") configure_download_network ;;
         *"备份与恢复") backup_menu ;;
         *"高级工具")
-            SUB=$(ui_menu "高级工具箱" "🦀 ClewdR 管理" "♊ Gemini-CLI(测试模块，可能有未知bug)" "🛡️  ADB 保活" "🔙 返回上级")
+            SUB=$(ui_menu "高级工具箱" \
+                "🦀 ClewdR 管理" \
+                "♊ Gemini CLI代理" \
+                "🛡️  ADB 保活" \
+                "🔙 返回上级"
+            )
             case "$SUB" in
-                *"ClewdR"*) clewd_menu ;;
+                *"ClewdR"*) source "$TAVX_DIR/modules/clewd.sh"; clewd_menu ;;
                 *"Gemini"*) source "$TAVX_DIR/modules/Gemini_CLI.sh"; gemini_menu ;;
                 *"ADB"*) source "$TAVX_DIR/modules/adb_keepalive.sh"; adb_menu_loop ;;
                 *"返回"*) ;;

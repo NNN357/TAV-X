@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Core: Utilities (V3.4 SafeGuard & FastMirror)
+# TAV-X Core: Utilities
 
 if [ -n "$TAVX_DIR" ] && [ -f "$TAVX_DIR/core/env.sh" ]; then
     source "$TAVX_DIR/core/env.sh"

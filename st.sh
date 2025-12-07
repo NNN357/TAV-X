@@ -162,7 +162,6 @@ else
 fi
 
 if [ "$SUCCESS" = true ]; then
-    # 权限与配置
     chmod +x "$TAVX_DIR/st.sh" "$TAVX_DIR"/core/*.sh "$TAVX_DIR"/modules/*.sh 2>/dev/null
     
     SHELL_RC="$HOME/.bashrc"
@@ -172,13 +171,14 @@ if [ "$SUCCESS" = true ]; then
         sed -i '/alias st=/d' "$SHELL_RC"
     fi
     echo "alias st='bash $TAVX_DIR/st.sh'" >> "$SHELL_RC"
+
+    # 安装 Gum
     if ! command -v gum &> /dev/null; then
         echo -e "${YELLOW}>>> 正在部署 UI 引擎 (Gum)...${NC}"
         pkg install gum -y >/dev/null 2>&1
     fi
 
     echo ""
-    
     if command -v gum &> /dev/null; then
         gum style \
           --border double \
@@ -187,25 +187,22 @@ if [ "$SUCCESS" = true ]; then
           --foreground 212 \
           --border-foreground 51 \
           "🎉 TAV-X 安装完成！"
-        gum style \
-          --margin "1 2" \
-          --padding "0 3" \
-          --foreground 87 \
-          "请输入  st  来启动 TAV-X"
-
         echo ""
-        if gum confirm "是否立即刷新终端环境？" \
-            --affirmative="🚀 立即刷新" \
+        gum confirm "是否立即启动 TAV-X？" \
+            --affirmative="🕒 稍后手动" \
             --negative="🕒 稍后手动" \
-            --default="true"; then
-            
-            echo -e "${GREEN}>>> 正在重载 Shell...${NC}"
-            sleep 0.5
-            exec "$SHELL"
-        else
-            echo ""
-            echo -e "${CYAN}>>> 请记得手动执行: source ~/.bashrc${NC}"
-        fi
+            --default="false" 2>/dev/null
+        echo ""
+        gum style \
+          --border normal \
+          --margin "1 2" \
+          --padding "1 2" \
+          --border-foreground 240 \
+          "👉 必须执行以下两步：" \
+          "" \
+          "  1. 刷新环境: $(gum style --foreground 82 'source ~/.bashrc')" \
+          "  2. 启动命令: $(gum style --foreground 212 'st')"
+    
     else
         echo -e "${GREEN}🎉 TAV-X 安装成功！${NC}"
         echo -e "👉 请输入 ${CYAN}source ~/.bashrc${NC} (或重启终端) 即可生效。"

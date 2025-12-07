@@ -320,8 +320,18 @@ start_service() {
     ensure_installed || return
     check_google_connectivity || return
     
+    local port=$(grep "^PORT=" "$ENV_FILE" 2>/dev/null | cut -d= -f2); [ -z "$port" ] && port=8888
+
     pkill -f "$VENV_PYTHON run.py"
     pkill -f "cloudflared tunnel"
+    
+    if command -v fuser >/dev/null; then
+        fuser -k -9 "$port/tcp" >/dev/null 2>&1
+    elif command -v lsof >/dev/null; then
+        local pid=$(lsof -t -i:"$port")
+        if [ -n "$pid" ]; then kill -9 $pid >/dev/null 2>&1; fi
+    fi
+    sleep 1
 
     if [ ! -f "$CREDS_FILE" ]; then
         if ls "$GEMINI_DIR"/*creds*.json 1> /dev/null 2>&1; then
@@ -334,7 +344,6 @@ start_service() {
         fi
     fi
 
-    local port=$(grep "^PORT=" "$ENV_FILE" 2>/dev/null | cut -d= -f2); [ -z "$port" ] && port=8888
     local pass=$(grep "^GEMINI_AUTH_PASSWORD=" "$ENV_FILE" 2>/dev/null | cut -d= -f2); [ -z "$pass" ] && pass="password"
     
     if grep -q "^PORT=" "$ENV_FILE"; then sed -i "s/^PORT=.*/PORT=$port/" "$ENV_FILE"; else echo "PORT=$port" >> "$ENV_FILE"; fi

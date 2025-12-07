@@ -1,5 +1,4 @@
 #!/bin/bash
-# TAV-X Module: Gemini 2.0 Proxy
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
@@ -35,7 +34,7 @@ check_google_connectivity() {
     local target_url="https://www.google.com"
     local proxy=$(get_proxy_address)
     
-    ui_print info "正在检测 Google 连通性 (超时: ${timeout_sec}s)..."
+    ui_print info "正在检测 Google 连通性..."
     
     local cmd="curl -I -s --max-time $timeout_sec"
     local proxy_msg="直连"
@@ -65,11 +64,15 @@ pip_install_smart() {
     local pip_cmd="$1"; shift; local args="$@"
     local proxy=$(get_proxy_address); local success=false
 
-    export CARGO_BUILD_JOBS=1 
+    export CARGO_BUILD_JOBS=1
+    export CC=clang
+    export CXX=clang++
+    export CFLAGS="-Wno-implicit-function-declaration"
+
     args="$args -v"
 
     if [ -n "$proxy" ]; then
-        ui_print info "正在使用代理下载依赖 (Verbose)..."
+        ui_print info "正在使用代理下载依赖..."
         if env http_proxy="$proxy" https_proxy="$proxy" $pip_cmd $args; then success=true; else ui_print warn "代理下载失败，尝试切换国内镜像源..."; fi
     fi
 
@@ -81,8 +84,9 @@ pip_install_smart() {
         done
     fi
     
-    unset CARGO_BUILD_JOBS
-    if [ "$success" = true ]; then return 0; else ui_print error "所有源均尝试失败。"; return 1; fi
+    unset CARGO_BUILD_JOBS CC CXX CFLAGS
+    
+    if [ "$success" = true ]; then return 0; else ui_print error "依赖安装失败 (编译错误)。"; return 1; fi
 }
 
 check_auth_dependencies() {
@@ -104,10 +108,15 @@ install_gemini() {
     if ! command -v python &> /dev/null; then NEED_PKGS="$NEED_PKGS python"; fi
     if ! command -v rustc &> /dev/null; then NEED_PKGS="$NEED_PKGS rust"; fi
     if ! command -v ar &> /dev/null; then NEED_PKGS="$NEED_PKGS binutils"; fi
+    if ! command -v clang &> /dev/null; then NEED_PKGS="$NEED_PKGS clang"; fi
+    if ! command -v make &> /dev/null; then NEED_PKGS="$NEED_PKGS make"; fi
+    if ! command -v cmake &> /dev/null; then NEED_PKGS="$NEED_PKGS cmake"; fi
     if ! command -v cloudflared &> /dev/null; then NEED_PKGS="$NEED_PKGS cloudflared"; fi
 
     if [ -n "$NEED_PKGS" ]; then 
-        ui_print info "正在预装环境..."
+        ui_print info "正在预装编译环境..."
+        echo -e "${CYAN}安装组件: $NEED_PKGS${NC}"
+        pkg update -y
         pkg install $NEED_PKGS -y
     fi
     
@@ -122,9 +131,8 @@ install_gemini() {
     ui_print info "创建 Python 虚拟环境..."
     python -m venv venv || { ui_print error "Venv 创建失败"; ui_pause; return 1; }
 
-    ui_print info "安装依赖 (含 SOCKS 修复)..."
-    echo -e "${CYAN}提示: 已开启详细日志，请耐心等待编译完成。${NC}"
-    sleep 1
+    ui_print info "正在编译安装依赖..."
+    echo -e "${YELLOW}⚠️ 注意：此处可能耗时较长，请保持亮屏！${NC}"
     
     pip_install_smart "$VENV_PIP" install --upgrade pip --no-cache-dir
     
@@ -136,9 +144,11 @@ install_gemini() {
         echo "HOST=0.0.0.0" > "$ENV_FILE"
         echo "PORT=8888" >> "$ENV_FILE"
         echo "GEMINI_AUTH_PASSWORD=password" >> "$ENV_FILE"
-        ui_print success "安装完成！"
+        ui_print success "Gemini 服务部署成功！"
     else
-        ui_print error "依赖安装失败。"; ui_pause; return 1
+        ui_print error "严重：依赖编译失败。"
+        echo -e "${YELLOW}请尝试运行 'pkg upgrade' 更新系统库后重试。${NC}"
+        ui_pause; return 1
     fi
     ui_pause
 }
@@ -230,7 +240,6 @@ authenticate_google() {
     
     ui_pause
 }
-
 
 start_tunnel() {
     ensure_installed || return

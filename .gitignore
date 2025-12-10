@@ -1,32 +1,62 @@
-clewdr/
-adb_tools/
-SillyTavern/
-node_modules/
+# --- 系统垃圾文件 ---
+.DS_Store
+Thumbs.db
+
+# --- 编辑器 ---
+.idea/
+.vscode/
+
+# --- 临时与缓存 ---
+*.swp
+*.tmp
+*.pid
 *.log
 *.txt
+*.py[cod]
+*.zip
+*.tar.gz
+*.7z
+ST_Backup_*.tar.gz
 .temp_link
-.update_available
 .tag_cache
-.plugin_map
-.api_res
 .mirror_cache
-secrets.env
-config/network.conf
-config/memory.conf
-.DS_Store
-Thumbs.db
-*.swp
-temp_restore/
+.plugin_map
+.update_available
+.mirror_race
 .api_req
+.api_res
+.audio_heartbeat.pid
+
+# --- Python / Node / Virtualenv ---
+node_modules/
+venv/
+__pycache__/
+
+# --- 项目目录 ---
+clewdr/
+adb_tools/
 adb_log.txt
-config/*.conf
-config/*.env
-config/cf_token
 gemini_proxy/
 gemini_proxy/*.log
-__pycache__/
-*.py[cod]
+SillyTavern/
+bin/
+temp_restore/
+
+# --- 机密文件 ---
+.env
+*.env
+secrets.env
+secrets.json
 oauth_creds.json
 client_secret.json
-.DS_Store
-Thumbs.db
+
+# --- 配置文件 ---
+config/*.conf
+config/*.env
+config/network.conf
+config/memory.conf
+config/cf_token
+config/silence.wav
+
+# --- 保留的例外 ---
+!config/plugins.list

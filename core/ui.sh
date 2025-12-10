@@ -51,61 +51,45 @@ ui_header() {
 
 ui_dashboard() {
     local st=$1; local cf=$2; local adb=$3
-    # 新增参数接收 Clewd 和 Gemini 的状态，默认为 0
-    local clewd="${6:-0}"; local gemini="${7:-0}"
     local net_dl="$4"; local net_api="$5"
+    local clewd="${6:-0}"; local gemini="${7:-0}"; local audio="${8:-0}"
 
     if [ "$HAS_GUM" = true ]; then
-        # 定义一个简单的函数：只有状态为 1 时才生成绿色组件
         make_dynamic_badge() {
             local label="$1"; local state="$2"
             if [ "$state" == "1" ]; then
-                # 显示绿色圆点 + 名称
                 echo "$(gum style --foreground $C_GREEN "●") $label"
             fi
-            # 状态不为 1 时什么都不输出，达成“隐藏”效果
         }
 
-        local spacer="      " # 组件之间的间距
+        local spacer="      "
 
-        # 1. 动态构建第一行：只包含正在运行的程序
-        # 使用数组收集所有活跃的组件
         local active_items=()
         
-        # 依次检查并添加。如果你希望 ST 即使挂了也显示红点，可以单独写，
-        # 但既然你的需求是“未运行不显示”，这里全部统一处理：
         [ "$st" == "1" ]     && active_items+=("$(make_dynamic_badge "酒馆" $st)")
         [ "$cf" == "1" ]     && active_items+=("$(make_dynamic_badge "穿透" $cf)")
         [ "$adb" == "1" ]    && active_items+=("$(make_dynamic_badge "ADB" $adb)")
+        [ "$audio" == "1" ]  && active_items+=("$(make_dynamic_badge "🎵保活" $audio)")
         [ "$clewd" == "1" ]  && active_items+=("$(make_dynamic_badge "ClewdR" $clewd)")
         [ "$gemini" == "1" ] && active_items+=("$(make_dynamic_badge "Gemini" $gemini)")
 
         local line1=""
         if [ ${#active_items[@]} -eq 0 ]; then
-            # 如果什么都没运行，显示一个灰色的提示
             line1=$(gum style --foreground $C_DIM "💤 等待服务启动...")
         else
-            # 将数组展开传递给 gum join，这样它们会自动水平排列
-            # 我们手动在数组元素间加入 spacer 比较麻烦，
-            # 简单的方法是利用 gum join --horizontal 的特性，或者直接拼接字符串
-            
-            # 这里采用字符串拼接方式，简单直接
             for item in "${active_items[@]}"; do
                 line1="${line1}${item}${spacer}"
             done
         fi
         
-        # 2. 第二行保持不变 (网络状态)
         local line2=$(gum join --vertical --align center \
             "$(gum style --foreground $C_BLUE "网络: $net_dl")" \
             "$(gum style --foreground $C_PURPLE "API : $net_api")" \
         )
 
-        # 3. 组合最终面板
         gum style --border normal --border-foreground $C_DIM --padding "0 1" --margin "0 0 1 0" --align center "$line1" "" "$line2"
     else
-        # 非 Gum 环境（备用显示）
-        echo "运行中: ST[$st] CF[$cf] ADB[$adb] Clewd[$clewd] Gemini[$gemini]"
+        echo "运行中: ST[$st] CF[$cf] ADB[$adb] Audio[$audio] Clewd[$clewd] Gemini[$gemini]"
         echo "下载: $net_dl"
         echo "API : $net_api"
         echo "----------------------------------------"

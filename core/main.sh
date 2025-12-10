@@ -18,12 +18,14 @@ check_for_updates
 send_analytics
 
 while true; do
-    S_ST=0; S_CF=0; S_ADB=0; S_CLEWD=0; S_GEMINI=0
+    S_ST=0; S_CF=0; S_ADB=0; S_CLEWD=0; S_GEMINI=0; S_AUDIO=0
     pgrep -f "node server.js" >/dev/null && S_ST=1
     pgrep -f "cloudflared" >/dev/null && S_CF=1
     command -v adb &>/dev/null && adb devices 2>/dev/null | grep -q "device$" && S_ADB=1
     pgrep -f "clewd" >/dev/null && S_CLEWD=1
     pgrep -f "run.py" >/dev/null && S_GEMINI=1
+    pgrep -f "mpv --no-terminal" >/dev/null && S_AUDIO=1
+
     NET_DL="自动优选"
     if [ -f "$NETWORK_CONFIG" ]; then
         CONF=$(cat "$NETWORK_CONFIG"); TYPE=${CONF%%|*}; VAL=${CONF#*|}
@@ -42,8 +44,7 @@ while true; do
     fi
 
     ui_header ""
-    
-    ui_dashboard "$S_ST" "$S_CF" "$S_ADB" "$NET_DL" "$NET_API" "$S_CLEWD" "$S_GEMINI"
+    ui_dashboard "$S_ST" "$S_CF" "$S_ADB" "$NET_DL" "$NET_API" "$S_CLEWD" "$S_GEMINI" "$S_AUDIO"
 
     OPT_UPD="🔄 安装与更新"
     [ -f "$TAVX_DIR/.update_available" ] && OPT_UPD="🔄 安装与更新 🔔"
@@ -56,7 +57,8 @@ while true; do
         "🌐 网络设置" \
         "💾 备份与恢复" \
         "🛠️  高级工具" \
-        "🚪 退出程序"
+        "🚪 保持后台并退出" \
+        "🛑 结束所有服务并退出"
     )
 
     case "$CHOICE" in
@@ -80,7 +82,33 @@ while true; do
                 *"ADB"*) source "$TAVX_DIR/modules/adb_keepalive.sh"; adb_menu_loop ;;
                 *"返回"*) ;;
             esac ;;
-        *"退出程序") ui_print info "再见！"; exit 0 ;;
+            
+        *"保持后台"*) 
+            ui_print info "程序已最小化，服务继续在后台运行。"
+            ui_print info "下次输入 'st' 即可唤回菜单。"
+            exit 0 
+            ;;
+            
+        *"结束所有"*)
+            echo ""
+            if ui_confirm "确定要关闭所有服务（酒馆、穿透、保活等）吗？"; then
+                ui_spinner "正在停止所有进程..." "
+                    pkill -f 'node server.js'
+                    pkill -f 'cloudflared'
+                    pkill -f 'clewd'
+                    pkill -f 'run.py'
+                    pkill -f 'mpv --no-terminal'
+                    termux-wake-unlock 2>/dev/null
+                    rm -f '$TAVX_DIR/.temp_link'
+                    rm -f '$TAVX_DIR/.audio_heartbeat.pid'
+                "
+                ui_print success "所有服务已停止，资源已释放。"
+                exit 0
+            else
+                ui_print info "操作已取消。"
+            fi
+            ;;
+            
         *) exit 0 ;;
     esac
 done

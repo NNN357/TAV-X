@@ -38,14 +38,9 @@ get_smart_proxy_url() {
     fi
 }
 
-is_port_open() {
-    timeout 0.1 bash -c "</dev/tcp/$1/$2" 2>/dev/null && return 0 || return 1
-}
-
-ensure_critical_configs() {
-    ui_print info "正在校验配置..."
-    local CONF="$INSTALL_DIR/config.yaml"
-
+apply_recommended_settings() {
+    ui_print info "正在应用推荐配置..."
+    
     config_set listen true
     config_set whitelistMode false
     config_set basicAuthMode false
@@ -57,6 +52,9 @@ ensure_critical_configs() {
     config_set enableServerPlugins true 
     config_set performance.useDiskCache false
     config_set performance.lazyLoadCharacters true
+    
+    ui_print success "推荐配置已应用！"
+    sleep 1
 }
 
 check_install_integrity() {
@@ -101,9 +99,6 @@ start_node_server() {
     cd "$INSTALL_DIR" || return 1
     termux-wake-lock
     rm -f "$SERVER_LOG"
-    
-    ensure_critical_configs
-    
     ui_spinner "正在启动酒馆服务..." "nohup node $MEM_ARGS server.js > '$SERVER_LOG' 2>&1 & sleep 2"
 }
 
@@ -187,10 +182,6 @@ start_temp_tunnel() {
 
 start_menu() {
     check_install_integrity || return
-    
-    # 优化：删除了这里的 ensure_critical_configs 调用
-    # 现在进入菜单是“瞬开”的，不再会有卡顿。
-    
     local PORT=$(get_active_port)
 
     while true; do
@@ -214,7 +205,7 @@ start_menu() {
         echo -e "状态: $status_txt"
         echo ""
 
-        CHOICE=$(ui_menu "请选择操作" "🏠 启动本地模式" "🌍 启动远程穿透" "🔍 获取远程链接" "📜 监控运行日志" "🛑 停止所有服务" "🔙 返回主菜单")
+        CHOICE=$(ui_menu "请选择操作" "🏠 启动本地模式" "🌍 启动远程穿透" "🔍 获取远程链接" "⚡ 一键应用推荐配置" "📜 监控运行日志" "🛑 停止所有服务" "🔙 返回主菜单")
 
         case "$CHOICE" in
             *"本地模式"*) 
@@ -243,7 +234,9 @@ start_menu() {
                     start_temp_tunnel "$PORT" "$PROXY_URL"
                 fi
                 ui_pause ;;
-
+            
+            *"推荐配置"*) apply_recommended_settings ;;
+            
             *"远程链接"*)
                 local TOKEN_FILE="$TAVX_DIR/config/cf_token"
                 if [ -f "$TOKEN_FILE" ] && [ -s "$TOKEN_FILE" ]; then

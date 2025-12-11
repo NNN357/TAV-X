@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Core: Security & System Config (V3.1 Clean & Strict)
+# TAV-X Core: Security & System Config
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
@@ -7,6 +7,111 @@ source "$TAVX_DIR/core/utils.sh"
 
 NETWORK_CONFIG="$TAVX_DIR/config/network.conf"
 MEMORY_CONFIG="$TAVX_DIR/config/memory.conf"
+
+configure_server_settings() {
+    [ ! -f "$INSTALL_DIR/config.yaml" ] && { ui_print error "配置文件不存在，请先安装酒馆。"; ui_pause; return; }
+    local CONFIG_MAP=(
+        "SEPARATOR|--- 基础连接设置 ---"
+        "listen|允许外部网络连接"
+        "whitelistMode|白名单模式"
+        "basicAuthMode|强制密码登录"
+        "enableUserAccounts|多用户账号系统"
+        "enableDiscreetLogin|谨慎登录模式"
+        
+        "SEPARATOR|--- 网络与安全进阶 ---"
+        "disableCsrfProtection|禁用 CSRF 保护"
+        "enableCorsProxy|启用 CORS 代理"
+        "protocol.ipv6|启用 IPv6 协议支持"
+        "ssl.enabled|启用 SSL/HTTPS"
+        "hostWhitelist.enabled|Host 头白名单检查"
+
+        "SEPARATOR|--- 性能与更新优化 ---"
+        "performance.lazyLoadCharacters|懒加载角色卡"
+        "performance.useDiskCache|启用硬盘缓存"
+        "extensions.enabled|加载扩展插件"
+        "extensions.autoUpdate|自动更新扩展"
+        "enableServerPlugins|加载服务端插件"
+        "enableServerPluginsAutoUpdate|自动更新服务端插件"
+    )
+
+    while true; do
+        ui_header "核心参数配置"
+        echo -e "${CYAN}点击条目即可切换状态${NC}"
+        echo "----------------------------------------"
+
+        local MENU_OPTS=()
+        local KEY_LIST=()
+        
+        for item in "${CONFIG_MAP[@]}"; do
+            local key="${item%%|*}"
+            local label="${item#*|}"
+
+            if [ "$key" == "SEPARATOR" ]; then
+                MENU_OPTS+=("📂 $label")
+                KEY_LIST+=("SEPARATOR")
+                continue
+            fi
+            
+            local val=$(config_get "$key")
+            
+            local icon="🔴"
+            local stat="[关闭]"
+            
+            if [ "$val" == "true" ]; then
+                icon="🟢"
+                stat="[开启]"
+            fi
+            
+            if [[ "$key" == "whitelistMode" || "$key" == "performance.useDiskCache" ]]; then
+                if [ "$val" == "true" ]; then icon="🟡"; fi
+            fi
+            
+            if [[ "$key" == *"autoUpdate"* || "$key" == *"AutoUpdate"* ]]; then
+                 if [ "$val" == "true" ]; then icon="🟡"; fi
+            fi
+
+            MENU_OPTS+=("$icon $label $stat")
+            KEY_LIST+=("$key")
+        done
+        
+        MENU_OPTS+=("🔙 返回上级")
+
+        local CHOICE_IDX
+        if [ "$HAS_GUM" = true ]; then
+            local SELECTED_TEXT=$(gum choose "${MENU_OPTS[@]}" --header "" --cursor.foreground 212)
+            for i in "${!MENU_OPTS[@]}"; do
+                if [[ "${MENU_OPTS[$i]}" == "$SELECTED_TEXT" ]]; then CHOICE_IDX=$i; break; fi
+            done
+        else
+            local i=1
+            for opt in "${MENU_OPTS[@]}"; do echo "$i. $opt"; ((i++)); done
+            read -p "请输入序号: " input_idx
+            if [[ "$input_idx" =~ ^[0-9]+$ ]]; then
+                CHOICE_IDX=$((input_idx - 1))
+            fi
+        fi
+
+        if [[ "${MENU_OPTS[$CHOICE_IDX]}" == *"返回"* ]]; then
+            return
+        fi
+
+        if [ -n "$CHOICE_IDX" ] && [ "$CHOICE_IDX" -ge 0 ] && [ "$CHOICE_IDX" -lt "${#KEY_LIST[@]}" ]; then
+            local target_key="${KEY_LIST[$CHOICE_IDX]}"
+            if [ "$target_key" == "SEPARATOR" ]; then
+                continue
+            fi
+
+            local current_val=$(config_get "$target_key")
+            local new_val="true"
+            
+            if [ "$current_val" == "true" ]; then new_val="false"; fi
+            
+            if config_set "$target_key" "$new_val"; then
+                sleep 0.1
+            fi
+        fi
+    done
+}
 
 configure_memory() {
     ui_header "运行内存配置 (Memory Tuning)"
@@ -168,7 +273,7 @@ configure_api_proxy() {
                         ui_print warn "系统非代理模式"
                     fi
                 else 
-                    local dyn=$(get_dynamic_proxy)
+                    local dyn=$(get_active_proxy)
                     if [ -n "$dyn" ]; then
                         config_set requestProxy.enabled true 
                         config_set requestProxy.url "$dyn" 
@@ -227,14 +332,15 @@ configure_cf_token() {
             rm -f "$token_file"
             ui_print success "Token 已清除，已恢复为临时隧道模式。"
             ui_pause ;;
+        *"返回"*) return ;;
     esac
 }
-
 
 security_menu() {
     while true; do
         ui_header "系统设置"
         CHOICE=$(ui_menu "请选择功能" \
+            "⚙️  核心参数配置" \
             "🧠 配置运行内存" \
             "📥 下载网络配置" \
             "🌐 配置API代理" \
@@ -245,6 +351,7 @@ security_menu() {
             "🔙 返回主菜单"
         )
         case "$CHOICE" in
+            *"核心参数"*) configure_server_settings ;;
             *"内存"*) configure_memory ;; 
             *"下载"*) configure_download_network ;;
             *"API"*) configure_api_proxy ;;

@@ -34,6 +34,8 @@ update_sillytavern() {
         ui_pause; return
     fi
 
+    prepare_network_strategy "SillyTavern/SillyTavern"
+
     local UPDATE_CMD="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$INSTALL_DIR\" \"SillyTavern/SillyTavern\"; cd \"$INSTALL_DIR\"; git pull --autostash"
     
     if ui_spinner "正在同步最新代码..." "$UPDATE_CMD"; then
@@ -87,6 +89,7 @@ rollback_sillytavern() {
         case "$CHOICE" in
             *"解除锁定"*)
                 if ui_confirm "确定恢复到最新 Release 版？"; then
+                    prepare_network_strategy "SillyTavern/SillyTavern"
                     local RESTORE="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$INSTALL_DIR\" \"SillyTavern/SillyTavern\"; git config remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\"; git fetch origin release --depth=1; git reset --hard origin/release; git checkout release"
                     if ui_spinner "正在归队..." "$RESTORE"; then
                         echo ""; npm_install_smart "$INSTALL_DIR"
@@ -101,6 +104,7 @@ rollback_sillytavern() {
                 sleep 0.5 ;;
 
             *"回退至历史版本"*)
+                prepare_network_strategy "SillyTavern/SillyTavern"
                 if [ ! -f "$TAG_CACHE" ]; then
                     local FETCH="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$INSTALL_DIR\" \"SillyTavern/SillyTavern\"; git fetch --tags"
                     if ! ui_spinner "云端获取中..." "$FETCH"; then
@@ -130,6 +134,7 @@ rollback_sillytavern() {
                 
             *"切换通道"*)
                 local TARGET=""; [[ "$CHOICE" == *"Release"* ]] && TARGET="release"; [[ "$CHOICE" == *"Staging"* ]] && TARGET="staging"
+                prepare_network_strategy "SillyTavern/SillyTavern"
                 local SW_CMD="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$INSTALL_DIR\" \"SillyTavern/SillyTavern\"; git config remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\"; git fetch origin $TARGET --depth=1; git reset --hard origin/$TARGET; git checkout $TARGET"
                 if ui_spinner "切换至 $TARGET..." "$SW_CMD"; then
                     echo ""; npm_install_smart "$INSTALL_DIR"
@@ -143,6 +148,7 @@ rollback_sillytavern() {
 }
 
 perform_self_update() {
+    prepare_network_strategy "Future-404/TAV-X.git"
     local UPD_CMD="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$TAVX_DIR\" \"Future-404/TAV-X.git\"; cd \"$TAVX_DIR\"; CURr=\$(git rev-parse --abbrev-ref HEAD); git fetch --all && git reset --hard origin/\$CURr"
     if ui_spinner "更新脚本..." "$UPD_CMD"; then
         rm -f "$TAVX_DIR/.update_available"; chmod +x st.sh core/*.sh modules/*.sh scripts/*.js 2>/dev/null

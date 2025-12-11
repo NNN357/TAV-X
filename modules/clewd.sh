@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Module: ClewdR Manager (V3.4 Mobile UI Fix)
+# TAV-X Module: ClewdR Manager (V3.5 Network Fix)
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
@@ -22,7 +22,7 @@ install_clewdr() {
     cd "$CLEWD_DIR" || return
 
     local URL="https://github.com/Xerxes-2/clewdr/releases/latest/download/clewdr-android-aarch64.zip"
-
+    prepare_network_strategy "$URL"
     local CMD="
         source \"$TAVX_DIR/core/utils.sh\"
         if download_file_smart '$URL' 'clewd.zip'; then

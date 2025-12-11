@@ -1,5 +1,5 @@
 #!/bin/bash
-# TAV-X Core: Plugin Manager (V3.0 Smart Network)
+# TAV-X Core: Plugin Manager
 
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
@@ -20,6 +20,8 @@ install_single_plugin() {
     if is_installed "$dir"; then
         if ! ui_confirm "插件已存在，是否重新安装？"; then return; fi
     fi
+    
+    prepare_network_strategy "$repo"
 
     local TASKS=""
     if [ "$s" != "-" ]; then

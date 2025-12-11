@@ -15,18 +15,7 @@ LOG_FILE="$GEMINI_DIR/service.log"
 TUNNEL_LOG="$GEMINI_DIR/tunnel.log"
 
 get_proxy_address() {
-    _auto_heal_network_config
-    local network_conf="$TAVX_DIR/config/network.conf"
-    if [ -f "$network_conf" ]; then
-        local c=$(cat "$network_conf")
-        if [[ "$c" == PROXY* ]]; then
-            local val=${c#*|}; val=$(echo "$val"|tr -d '\n\r')
-            if [[ "$val" != *"://"* ]]; then val="http://$val"; fi
-            echo "$val"
-            return 0
-        fi
-    fi
-    return 1
+    get_active_proxy
 }
 
 check_google_connectivity() {
@@ -123,6 +112,10 @@ install_gemini() {
     check_auth_dependencies
 
     safe_rm "$GEMINI_DIR"
+    
+    # --- 修复点：提前确立网络策略 ---
+    prepare_network_strategy "$REPO_URL"
+
     local CLONE_CMD="source \"$TAVX_DIR/core/utils.sh\"; git_clone_smart '' '$REPO_URL' '$GEMINI_DIR'"
     if ! ui_spinner "正在下载源码..." "$CLONE_CMD"; then ui_print error "源码下载失败。"; ui_pause; return 1; fi
 
@@ -444,7 +437,7 @@ configure_params() {
 
 gemini_menu() {
     while true; do
-        ui_header "Gemini 2.0 智能代理"
+        ui_header "Gemini 3.0 智能代理"
         local s="${RED}● 已停止${NC}"; pgrep -f "$VENV_PYTHON run.py" >/dev/null && s="${GREEN}● 运行中${NC}"
         local cf="${RED}关${NC}"; pgrep -f "cloudflared" >/dev/null && cf="${GREEN}开${NC}"
         local a="${YELLOW}未认证${NC}"; [ -f "$CREDS_FILE" ] && a="${GREEN}已认证${NC}"

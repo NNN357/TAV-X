@@ -1,6 +1,5 @@
 /**
- * TAV-X Configuration Manager (The Scalpel) v2.4
- * Update: Batch Processing & Fsync (Fix I/O Hammering)
+ * TAV-X Configuration Manager
  */
 
 const fs = require('fs');
@@ -9,33 +8,148 @@ const path = require('path');
 const INSTALL_DIR = process.env.INSTALL_DIR || path.join(process.env.HOME, 'SillyTavern');
 const CONFIG_PATH = path.join(INSTALL_DIR, 'config.yaml');
 
+const args = process.argv.slice(2);
+const action = args[0];
+
+if (!action || args.length < 2) {
+    console.error("Usage: node config_mgr.js [get|set|set-batch] [key|json] [value]");
+    process.exit(1);
+}
+
 if (!fs.existsSync(CONFIG_PATH)) {
     console.error(`❌ Config file not found: ${CONFIG_PATH}`);
     process.exit(1);
 }
 
-const args = process.argv.slice(2);
-const action = args[0]; 
-const keyOrJson = args[1]; 
-const valParam = args[2]; 
+let fileContent = fs.readFileSync(CONFIG_PATH, 'utf8');
+let lines = fileContent.split(/\r?\n/);
 
-if (!action || !keyOrJson) {
-    console.error("Usage: node config_mgr.js [get|set|set-batch] [key|json] [value]");
+if (action === 'get') {
+    const keyToFind = args[1];
+    const val = getValue(lines, keyToFind);
+    if (val !== null) {
+        console.log(val);
+        process.exit(0);
+    } else {
+        process.exit(1);
+    }
+} 
+
+else if (action === 'set') {
+    const key = args[1];
+    const val = args[2];
+    const result = applyChange(lines, key, val);
+    
+    if (result.changed) {
+        writeAtomic(result.lines);
+        console.log(`✅ Updated [${key}] -> ${val}`);
+    } else {
+    }
+} 
+
+else if (action === 'set-batch') {
+    let updates = {};
+    try {
+        updates = JSON.parse(args[1]);
+    } catch (e) {
+        console.error("❌ Invalid JSON for batch update");
+        process.exit(1);
+    }
+
+    let globalChanged = false;
+    Object.keys(updates).forEach(key => {
+        const result = applyChange(lines, key, updates[key]);
+        if (result.changed) {
+            lines = result.lines;
+            globalChanged = true;
+            console.log(`✅ Set [${key}] -> ${updates[key]}`);
+        }
+    });
+
+    if (globalChanged) {
+        writeAtomic(lines);
+    }
+} 
+
+else {
+    console.error(`❌ Unknown action: ${action}`);
     process.exit(1);
 }
 
-function parseLineValue(line) {
-    const match = line.match(/:\s*(.*)/);
-    if (!match) return { val: '', comment: '' };
-    const raw = match[1];
-    const commentIdx = raw.indexOf('#');
-    if (commentIdx !== -1) {
-        return {
-            val: raw.substring(0, commentIdx).trim(),
-            comment: raw.substring(commentIdx) 
-        };
+function writeAtomic(linesData) {
+    const tempPath = CONFIG_PATH + '.tmp';
+    try {
+        fs.writeFileSync(tempPath, linesData.join('\n'), 'utf8');
+        const fd = fs.openSync(tempPath, 'r+');
+        fs.fsyncSync(fd);
+        fs.closeSync(fd);
+        fs.renameSync(tempPath, CONFIG_PATH);
+    } catch (err) {
+        console.error(`❌ Write Failed: ${err.message}`);
+        try { fs.unlinkSync(tempPath); } catch(e){}
+        process.exit(1);
     }
-    return { val: raw.trim(), comment: '' };
+}
+
+function getValue(lines, keyPath) {
+    const keys = keyPath.split('.');
+    let currentDepth = 0;
+    let indentStack = [-1];
+
+    for (const line of lines) {
+        if (!line.trim() || line.trim().startsWith('#')) continue;
+
+        const indent = getIndent(line);
+        const key = getKey(line);
+
+        while (indent <= indentStack[currentDepth] && currentDepth > 0) {
+            currentDepth--;
+        }
+
+        if (key === keys[currentDepth]) {
+            indentStack[currentDepth + 1] = indent;
+            if (currentDepth === keys.length - 1) {
+                const { val } = parseValue(line);
+                return val.replace(/^['"]|['"]$/g, '');
+            }
+            currentDepth++;
+        }
+    }
+    return null;
+}
+
+function applyChange(currentLines, keyPath, val) {
+    const keys = keyPath.split('.');
+    let currentDepth = 0;
+    let indentStack = [-1];
+    let isChanged = false;
+
+    const newLines = currentLines.map((line) => {
+        if (!line.trim() || line.trim().startsWith('#')) return line;
+
+        const indent = getIndent(line);
+        const key = getKey(line);
+
+        while (indent <= indentStack[currentDepth] && currentDepth > 0) {
+            currentDepth--;
+        }
+
+        if (key === keys[currentDepth]) {
+            indentStack[currentDepth + 1] = indent;
+            if (currentDepth === keys.length - 1) {
+                const { val: currVal, comment } = parseValue(line);
+                if (areValuesEqual(currVal, val)) return line;
+
+                isChanged = true;
+                const keyPart = line.substring(0, line.indexOf(':') + 1);
+                return `${keyPart} ${val}${comment}`;
+            } 
+            currentDepth++;
+        }
+        return line;
+    });
+
+    return { lines: newLines, changed: isChanged };
 }
 
 function getIndent(line) {
@@ -44,128 +158,52 @@ function getIndent(line) {
 }
 
 function getKey(line) {
-    const match = line.match(/^\s*([\w\-"']+):/);
-    if (!match) return null;
-    return match[1].replace(/['"]/g, '');
+    const match = line.match(/^\s*(?:['"]?([\w\-\.]+)['"]?)\s*:/);
+    return match ? match[1] : null;
 }
 
-function applyChange(lines, keyPath, newValue) {
-    const keys = keyPath.split('.');
-    let currentDepth = 0;
-    let pathFound = false;
-    let isChanged = false;
+function parseValue(line) {
+    const colIdx = line.indexOf(':');
+    if (colIdx === -1) return { val: '', comment: '' };
+    
+    let rawVal = line.substring(colIdx + 1);
+    let inQuote = false;
+    let quoteChar = '';
+    let commentIdx = -1;
 
-    const newLines = lines.map(line => {
-        if (line.trim().startsWith('#') || line.trim() === '') return line;
-        if (pathFound && currentDepth >= keys.length) return line;
-
-        const key = getKey(line);
+    for (let i = 0; i < rawVal.length; i++) {
+        const char = rawVal[i];
         
-        if (key === keys[currentDepth]) {
-            if (currentDepth === 0 && getIndent(line) > 0) return line;
-
-            if (currentDepth === keys.length - 1) {
-                pathFound = true;
-                const { val: currentValRaw } = parseLineValue(line);
-                const currentValClean = currentValRaw.replace(/^['"]|['"]$/g, '');
-                const newValClean = String(newValue).replace(/^['"]|['"]$/g, '');
-
-                if (currentValClean == newValClean) {
-                    return line;
-                }
-
-                if (currentValRaw.trim().endsWith('>') || currentValRaw.trim().endsWith('|')) {
-                    console.warn(`⚠️ Skipped complex value for ${keyPath}`);
-                    return line;
-                }
-
-                isChanged = true;
-                const indentStr = line.match(/^(\s*)/)[1];
-                const { comment } = parseLineValue(line);
-                
-                let finalLine = `${indentStr}${key}: ${newValue}`;
-                if (comment) finalLine += ` ${comment}`;
-                
-                return finalLine;
-            } else {
-                currentDepth++;
+        if (char === '"' || char === "'") {
+            if (!inQuote) {
+                inQuote = true;
+                quoteChar = char;
+            } else if (char === quoteChar) {
+                inQuote = false;
             }
         }
-        return line;
-    });
-
-    return { lines: newLines, changed: isChanged };
-}
-
-let content;
-try {
-    content = fs.readFileSync(CONFIG_PATH, 'utf8');
-} catch (err) {
-    console.error(`❌ Read error: ${err.message}`);
-    process.exit(1);
-}
-let lines = content.split('\n');
-
-if (action === 'get') {
-    const keys = keyOrJson.split('.');
-    let currentDepth = 0;
-    for (const line of lines) {
-        if (line.trim().startsWith('#') || line.trim() === '') continue;
-        const key = getKey(line);
-        if (key === keys[currentDepth]) {
-            if (currentDepth === 0 && getIndent(line) > 0) continue;
-            if (currentDepth === keys.length - 1) {
-                const { val } = parseLineValue(line);
-                console.log(val.replace(/^['"]|['"]$/g, ''));
-                process.exit(0);
-            } else currentDepth++;
+        if (!inQuote && char === '#') {
+            commentIdx = i;
+            break;
         }
     }
-    process.exit(1);
-} 
 
-else if (action === 'set') {
-    const { lines: newLines, changed } = applyChange(lines, keyOrJson, valParam);
-    if (changed) writeAtomic(newLines);
-    process.exit(0);
+    if (commentIdx !== -1) {
+        return {
+            val: rawVal.substring(0, commentIdx).trim(),
+            comment: rawVal.substring(commentIdx)
+        };
+    }
+    
+    return { val: rawVal.trim(), comment: '' };
 }
 
-else if (action === 'set-batch') {
-    let updates;
-    try {
-        updates = JSON.parse(keyOrJson);
-    } catch (e) {
-        console.error("❌ Invalid JSON for batch update");
-        process.exit(1);
+function areValuesEqual(fileVal, inputVal) {
+    const cleanFile = String(fileVal).replace(/^['"]|['"]$/g, '').trim();
+    const cleanInput = String(inputVal).replace(/^['"]|['"]$/g, '').trim();
+    if ((cleanFile === 'true' && cleanInput === 'true') || 
+        (cleanFile === 'false' && cleanInput === 'false')) {
+        return true;
     }
-
-    let anyChanged = false;
-    for (const [k, v] of Object.entries(updates)) {
-        const result = applyChange(lines, k, v);
-        lines = result.lines;
-        if (result.changed) anyChanged = true;
-    }
-
-    if (anyChanged) {
-        writeAtomic(lines);
-    } else {
-    }
-    process.exit(0);
-}
-
-function writeAtomic(linesData) {
-    const tempPath = CONFIG_PATH + '.tmp';
-    let fd;
-    try {
-        fd = fs.openSync(tempPath, 'w');
-        fs.writeSync(fd, linesData.join('\n'), 'utf8');
-        fs.fsyncSync(fd);
-        fs.closeSync(fd);
-        fs.renameSync(tempPath, CONFIG_PATH);
-    } catch (err) {
-        console.error(`❌ Write Failed: ${err.message}`);
-        if (fd) try { fs.closeSync(fd); } catch(e){}
-        try { fs.unlinkSync(tempPath); } catch (e) {} 
-        process.exit(1);
-    }
+    return cleanFile === cleanInput;
 }

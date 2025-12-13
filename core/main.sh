@@ -76,12 +76,14 @@ while true; do
             SUB=$(ui_menu "高级工具箱" \
                 "🦀 ClewdR 管理" \
                 "♊ Gemini CLI代理" \
+                "🏗️  AIStudio 代理" \
                 "🛡️  ADB 保活" \
                 "🔙 返回上级"
             )
             case "$SUB" in
                 *"ClewdR"*) source "$TAVX_DIR/modules/clewd.sh"; clewd_menu ;;
                 *"Gemini"*) source "$TAVX_DIR/modules/Gemini_CLI.sh"; gemini_menu ;;
+                *"AIStudio"*) source "$TAVX_DIR/modules/aistudio.sh"; aistudio_menu ;; # 新增这一行
                 *"ADB"*) source "$TAVX_DIR/modules/adb_keepalive.sh"; adb_menu_loop ;;
                 *"返回"*) ;;
             esac ;;

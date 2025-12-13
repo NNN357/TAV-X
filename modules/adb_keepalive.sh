@@ -16,19 +16,12 @@ check_dependency() {
         if adb --version &> /dev/null; then return 0; fi
         ui_print warn "ADB 架构错误，尝试自动修复..."
     fi
-
     ui_header "ADB 组件安装"
-    if [ -d "$LEGACY_ADB_DIR" ]; then 
-        rm -rf "$LEGACY_ADB_DIR"
-        [ -f "$HOME/.bashrc" ] && sed -i '/adb_tools\/platform-tools/d' "$HOME/.bashrc"
-    fi
-
+    if [ -d "$LEGACY_ADB_DIR" ]; then rm -rf "$LEGACY_ADB_DIR"; sed -i '/adb_tools\/platform-tools/d' "$HOME/.bashrc"; fi
     ui_print info "正在安装 android-tools..."
     if ui_spinner "安装中..." "pkg install android-tools -y"; then
-        if command -v adb &> /dev/null; then ui_print success "ADB 安装成功！"; else ui_print error "安装失败，请尝试运行 'pkg update' 后重试。"; fi
-    else
-        ui_print error "安装过程出错。";
-    fi
+        if command -v adb &> /dev/null; then ui_print success "ADB 安装成功！"; else ui_print error "安装失败。"; fi
+    else ui_print error "安装出错。"; fi
     ui_pause
 }
 
@@ -40,7 +33,6 @@ check_adb_status() {
 check_audio_deps() {
     local MISSING=""
     if ! command -v mpv &> /dev/null; then MISSING="$MISSING mpv"; fi
-    
     if [ -n "$MISSING" ]; then
         ui_header "安装音频组件"
         ui_print info "安装依赖: $MISSING"
@@ -50,36 +42,26 @@ check_audio_deps() {
 
 ensure_silence_file() {
     if [ -f "$SILENCE_FILE" ] && [ -s "$SILENCE_FILE" ]; then return 0; fi
-
     ui_print warn "静音文件丢失，正在重建..."
     mkdir -p "$(dirname "$SILENCE_FILE")"
     local RESCUE_WAV="UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
     echo "$RESCUE_WAV" | base64 -d > "$SILENCE_FILE"
-    
     if [ -s "$SILENCE_FILE" ]; then return 0; else ui_print error "无法生成静音文件！"; return 1; fi
 }
 
 start_heartbeat() {
     check_audio_deps
     ensure_silence_file || { ui_pause; return; }
-    
     if [ -f "$HEARTBEAT_PID" ]; then
         local old_pid=$(cat "$HEARTBEAT_PID")
         if kill -0 "$old_pid" 2>/dev/null; then ui_print warn "音频心跳已在运行。"; return; fi
     fi
-
     ui_header "启动音频心跳"
     echo -e "${YELLOW}策略：模拟前台媒体播放，强制提升进程优先级。${NC}"
     echo ""
-    
     setsid nohup bash -c "while true; do mpv --no-terminal --volume=0 --loop=inf \"$SILENCE_FILE\"; sleep 1; done" > /dev/null 2>&1 &
-    
     echo $! > "$HEARTBEAT_PID"
-    
-    if command -v termux-wake-lock &> /dev/null; then
-        termux-wake-lock
-    fi
-    
+    if command -v termux-wake-lock &> /dev/null; then termux-wake-lock; fi
     ui_print success "心跳已启动！(PID: $(cat "$HEARTBEAT_PID"))"
     ui_pause
 }
@@ -90,28 +72,20 @@ stop_heartbeat() {
         kill -9 "$pid" 2>/dev/null
         rm -f "$HEARTBEAT_PID"
         pkill -f "mpv --no-terminal"
-        
-        if command -v termux-wake-unlock &> /dev/null; then
-            termux-wake-unlock
-        fi
-        
+        if command -v termux-wake-unlock &> /dev/null; then termux-wake-unlock; fi
         ui_print success "音频心跳已停止。"
-    else
-        ui_print warn "心跳未运行。"
-    fi
+    else ui_print warn "心跳未运行。"; fi
     ui_pause
 }
 
 pair_device() {
     ui_header "ADB 无线配对"
-    echo -e "${YELLOW}前往: 开发者选项 -> 无线调试 -> 使用配对码配对${NC}"
     adb start-server >/dev/null 2>&1
     local host=$(ui_input "输入 IP:端口" "127.0.0.1:" "false")
     local code=$(ui_input "输入 6 位配对码" "" "false")
     [[ -z "$code" ]] && return
-    
     if ui_spinner "正在配对..." "adb pair '$host' '$code' > '$LOG_FILE' 2>&1"; then
-        if grep -q "Successfully paired" "$LOG_FILE"; then ui_print success "配对成功！"; else ui_print error "配对失败，请检查配对码。"; fi
+        if grep -q "Successfully paired" "$LOG_FILE"; then ui_print success "配对成功！"; else ui_print error "配对失败。"; fi
     else ui_print error "连接超时。"; fi
     ui_pause
 }
@@ -119,10 +93,8 @@ pair_device() {
 connect_adb() {
     ui_header "连接 ADB"
     if check_adb_status; then ui_print success "ADB 已连接。"; ui_pause; return; fi
-    echo -e "${YELLOW}请输入无线调试界面的【IP地址和端口】${NC}"
     local target=$(ui_input "输入 IP:端口" "127.0.0.1:" "false")
     if [ -z "$target" ] || [ "$target" == "127.0.0.1:" ]; then return; fi
-    
     if ui_spinner "正在连接 $target ..." "adb connect $target"; then
         sleep 1
         if check_adb_status; then ui_print success "连接成功！"; else ui_print error "连接失败。"; fi
@@ -137,38 +109,27 @@ get_device_info() {
 }
 
 apply_universal_fixes() {
-    # 修复：重新获取环境信息，防止子Shell变量丢失
     local PKG="com.termux"
     local SDK_VER=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
     [ -z "$SDK_VER" ] && SDK_VER=0
-
-    ui_print info "执行通用 AOSP 优化 (SDK: $SDK_VER)..."
     
     if [ "$SDK_VER" -ge 32 ]; then
-        ui_print info "Android 12+ 检测: 禁用幽灵进程杀手..."
-        # 修复：移除引号，确保命令被正确解析
         adb shell device_config set_sync_disabled_for_tests persistent
         adb shell device_config put activity_manager max_phantom_processes 2147483647
         adb shell device_config put activity_manager settings_enable_monitor_phantom_procs false
     fi
 
     adb shell dumpsys deviceidle whitelist +$PKG >/dev/null 2>&1
-    
     adb shell cmd appops set $PKG RUN_IN_BACKGROUND allow
     adb shell cmd appops set $PKG RUN_ANY_IN_BACKGROUND allow
     adb shell cmd appops set $PKG WAKE_LOCK allow
     adb shell cmd appops set $PKG START_FOREGROUND allow
-    
     adb shell am set-standby-bucket $PKG active >/dev/null 2>&1
     
-    if command -v termux-wake-lock &> /dev/null; then
-        termux-wake-lock
-        ui_print info "已申请 Termux 唤醒锁 (WakeLock)"
-    fi
+    if command -v termux-wake-lock &> /dev/null; then termux-wake-lock; fi
 }
 
 apply_vendor_fixes() {
-    # 修复：重新获取环境信息
     local PKG="com.termux"
     local MANUFACTURER=$(adb shell getprop ro.product.manufacturer | tr '[:upper:]' '[:lower:]')
     local SDK_VER=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
@@ -178,7 +139,7 @@ apply_vendor_fixes() {
     
     case "$MANUFACTURER" in
         *huawei*|*honor*)
-            ui_print info "应用华为/荣耀策略 (Safe Mode)..."
+            ui_print info "正在应用华为策略..."
             adb shell pm disable-user --user 0 com.huawei.powergenie 2>/dev/null
             adb shell pm disable-user --user 0 com.huawei.android.hwaps 2>/dev/null
             adb shell am stopservice hwPfwService 2>/dev/null
@@ -186,15 +147,15 @@ apply_vendor_fixes() {
             ;;
             
         *xiaomi*|*redmi*)
-            ui_print info "应用小米/Redmi策略..."
+            ui_print info "正在应用小米策略..."
             adb shell pm disable-user --user 0 com.xiaomi.joyose 2>/dev/null
             adb shell pm disable-user --user 0 com.xiaomi.powerchecker 2>/dev/null
             adb shell am start -n com.miui.securitycenter/com.miui.permcenter.autostart.AutoStartManagementActivity >/dev/null 2>&1
-            echo -e "${YELLOW}提示: 请在弹出的窗口中允许 Termux 自启动${NC}"
+            echo -e "${YELLOW}提示: 系统已弹窗，请务必勾选 Termux 的【自启动】权限。${NC}"
             ;;
             
         *oppo*|*realme*|*oneplus*)
-            ui_print info "应用 ColorOS 策略..."
+            ui_print info "正在应用 ColorOS 策略..."
             if [ "$SDK_VER" -ge 34 ]; then
                 ui_print warn "Android 14+ 检测: 跳过禁用 Athena (防砖保护)。"
                 adb shell settings put global coloros_super_power_save 0
@@ -202,10 +163,11 @@ apply_vendor_fixes() {
                 adb shell pm disable-user --user 0 com.coloros.athena 2>/dev/null
             fi
             adb shell am start -n com.coloros.safecenter/.startupapp.StartupAppListActivity >/dev/null 2>&1
+            echo -e "${YELLOW}提示: 系统已弹窗，请允许自启动。${NC}"
             ;;
             
         *vivo*|*iqoo*)
-            ui_print info "应用 OriginOS 策略..."
+            ui_print info "正在应用 OriginOS 策略..."
             adb shell pm disable-user --user 0 com.vivo.pem 2>/dev/null
             adb shell pm disable-user --user 0 com.vivo.abe 2>/dev/null
             adb shell am start -a android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS >/dev/null 2>&1
@@ -225,13 +187,7 @@ apply_smart_keepalive() {
     echo -e "设备: ${CYAN}$MANUFACTURER${NC} (SDK: $SDK_VER)"
     echo "----------------------------------------"
     
-    local TARGET_COMP="系统默认电源策略"
-    case "$MANUFACTURER" in
-        *xiaomi*|*redmi*) TARGET_COMP="Joyose (温控/云控)" ;;
-        *oppo*|*realme*|*oneplus*) TARGET_COMP="Athena (系统守护)" ;;
-        *huawei*|*honor*) TARGET_COMP="PowerGenie (省电精灵)" ;;
-        *vivo*|*iqoo*) TARGET_COMP="PEM/ABE (省电管理)" ;;
-    esac
+    local SELF_SOURCE="source \"${BASH_SOURCE[0]}\""
 
     CHOICE=$(ui_menu "请选择保活方案" \
         "🛡️ 通用保活 (推荐/安全)" \
@@ -239,40 +195,37 @@ apply_smart_keepalive() {
         "🔙 返回" \
     )
 
-    # 修复：调用时加载自身环境，确保函数在子Shell中可用
-    local SELF_SOURCE="source \"$TAVX_DIR/modules/adb_keepalive.sh\""
-
     case "$CHOICE" in
         *"通用"*)
             echo ""
             ui_print info "正在执行通用优化 (AOSP)..."
-            ui_spinner "应用策略中..." "$SELF_SOURCE; apply_universal_fixes"
+            ui_spinner "应用系统参数..." "$SELF_SOURCE; apply_universal_fixes"
             
             ui_print success "通用保活执行成功！"
-            echo -e "${YELLOW}提示：请重启手机，如果之后频繁遇到杀后台，请尝试执行[激进保活]方案。${NC}"
+            echo -e "${YELLOW}提示：请重启手机。如果依然杀后台，请尝试[激进保活]。${NC}"
             ui_pause
             ;;
             
         *"激进"*)
             echo ""
             echo -e "${RED}⚠️  激进模式副作用警告：${NC}"
-            echo -e "此模式将禁用 [${TARGET_COMP}] 等组件，虽然保活效果极强，但可能导致："
-            echo -e "1. 发热失控：高负载下无温控压制。"
-            echo -e "2. 充电变慢：可能丢失私有快充协议。"
-            echo -e "3. 系统卡顿：可能影响系统调度。"
-            echo ""
+            echo -e "此模式将禁用温控/云控组件，可能导致发热或私有快充失效。"
             
             if ! ui_confirm "我已知晓风险，确认执行？"; then 
                 ui_print info "已取消。"; ui_pause; return
             fi
             
-            ui_spinner "正在应用通用策略..." "$SELF_SOURCE; apply_universal_fixes"
-            ui_spinner "正在应用厂商策略..." "$SELF_SOURCE; apply_vendor_fixes"
+            ui_spinner "步骤1/2: 应用通用策略..." "$SELF_SOURCE; apply_universal_fixes"
             
+            echo ""
+            ui_print info "步骤2/2: 应用厂商策略..."
+            apply_vendor_fixes 
+            
+            echo ""
             ui_print success "激进保活执行成功！"
-            echo -e "${YELLOW}提示：${NC}"
-            echo -e "1. **建议重启手机**以确保被禁用的组件彻底停止运行。"
-            echo -e "2. 如需恢复，请使用本菜单的 [撤销所有优化] 功能。"
+            echo -e "${YELLOW}重要：${NC}"
+            echo -e "1. 建议**重启手机**以彻底应用更改。"
+            echo -e "2. 重启后无需再次执行，但需重新开启音频心跳。"
             ui_pause
             ;;
             
@@ -283,14 +236,6 @@ apply_smart_keepalive() {
 revert_all_changes() {
     ui_header "撤销/恢复出厂"
     if ! check_adb_status; then ui_print error "ADB 未连接。"; ui_pause; return; fi
-    
-    get_device_info
-    echo -e "${RED}🚨 警告：全量回滚模式${NC}"
-    echo -e "此操作将无视之前的设置，强制执行以下恢复："
-    echo -e "1. 恢复 Android 原生电源限制 (幽灵进程杀手等)"
-    echo -e "2. 尝试重新启用所有厂商组件 (华为/小米/OV等)"
-    echo -e "3. 重置 Termux 的后台权限为默认"
-    echo ""
     
     if ! ui_confirm "确定要恢复出厂默认配置吗？"; then return; fi
     
@@ -314,7 +259,6 @@ revert_all_changes() {
     "
     
     ui_print success "已恢复默认设置！"
-    echo -e "${YELLOW}建议重启手机以重新加载系统组件。${NC}"
     ui_pause
 }
 
@@ -326,7 +270,7 @@ adb_menu_loop() {
 
     check_dependency
     while true; do
-        ui_header "ADB 智能保活 (AndroKeepAlive)"
+        ui_header "ADB 智能保活"
         
         local s_adb="${RED}● 未连接${NC}"; check_adb_status && s_adb="${GREEN}● 已连接${NC}"
         local s_audio="${RED}● 关闭${NC}"

@@ -1,4 +1,4 @@
-v#!/bin/bash
+#!/bin/bash
 # TAV-X Core: Backup & Restore
 
 source "$TAVX_DIR/core/env.sh"

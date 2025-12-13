@@ -56,7 +56,8 @@ config/*.env
 config/network.conf
 config/memory.conf
 config/cf_token
-config/silence.wav
 
 # --- 保留的例外 ---
 !config/plugins.list
+!config/silence.wav
+

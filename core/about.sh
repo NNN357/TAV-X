@@ -6,8 +6,7 @@ GROUP_QQ="616353694"
 CONTACT_EMAIL="29006900lz@gmail.com"
 PROJECT_URL="https://github.com/Future-404/TAV-X"
 SLOGAN="别让虚拟的温柔，偷走了你在现实里本该拥有的温暖。"
-
-UPDATE_SUMMARY="稳定性重铸：彻底修复配置损坏风险，重构网络交互逻辑。"
+UPDATE_SUMMARY="ADB 模块重构：引入「通用/激进」双模式保活，新增智能诊断与风险分级提示。移除音频心跳依赖，修复通知栏挂件丢失，保活更稳更安全。"
 
 show_about_page() {
     ui_header "帮助与支持"

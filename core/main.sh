@@ -18,6 +18,84 @@ check_dependencies
 check_for_updates
 send_analytics
 
+# --- 动态模块加载器 ---
+load_advanced_tools_menu() {
+    local module_files=()
+    local module_names=()
+    local module_entries=()
+    local menu_options=()
+
+    # 1. 扫描 modules 目录下的所有 .sh 文件
+    # 使用 nullglob 防止目录为空时报错
+    shopt -s nullglob
+    for file in "$TAVX_DIR/modules/"*.sh; do
+        # 检查文件是否包含元数据标记
+        if grep -q "\[METADATA\]" "$file"; then
+            # 提取 MODULE_NAME 和 MODULE_ENTRY
+            # 使用 grep 提取行，cut 分割，sed 去除前后空格
+            local m_name=$(grep "MODULE_NAME:" "$file" | cut -d':' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            local m_entry=$(grep "MODULE_ENTRY:" "$file" | cut -d':' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+            # 只有当名称和入口都存在时才添加到菜单
+            if [ -n "$m_name" ] && [ -n "$m_entry" ]; then
+                module_files+=("$file")
+                module_names+=("$m_name")
+                module_entries+=("$m_entry")
+                menu_options+=("$m_name")
+            fi
+        fi
+    done
+    shopt -u nullglob
+
+    # 如果没有找到任何模块
+    if [ ${#menu_options[@]} -eq 0 ]; then
+        ui_print warn "未检测到有效的工具模块。"
+        echo -e "${YELLOW}请检查 modules/ 目录下脚本是否包含 [METADATA] 头部信息。${NC}"
+        ui_pause
+        return
+    fi
+
+    menu_options+=("🔙 返回上级")
+
+    # 2. 显示动态菜单
+    # 循环直到用户选择返回，实现子菜单常驻
+    while true; do
+        local choice=$(ui_menu "高级工具箱 (插件化)" "${menu_options[@]}")
+
+        if [[ "$choice" == *"返回上级"* ]]; then
+            return
+        fi
+
+        # 3. 匹配并执行
+        local matched=false
+        for i in "${!module_names[@]}"; do
+            if [[ "${module_names[$i]}" == "$choice" ]]; then
+                local target_file="${module_files[$i]}"
+                local target_entry="${module_entries[$i]}"
+                
+                # 加载脚本环境
+                source "$target_file"
+                
+                # 检查入口函数是否存在
+                if command -v "$target_entry" &> /dev/null; then
+                    $target_entry
+                else
+                    ui_print error "模块错误：找不到入口函数 '$target_entry'"
+                    ui_pause
+                fi
+                matched=true
+                break
+            fi
+        done
+        
+        # 理论上不会运行到这里，但做个防守
+        if [ "$matched" = false ]; then
+            ui_print error "无法加载该模块，请重试。"
+            ui_pause
+        fi
+    done
+}
+
 while true; do
     S_ST=0; S_CF=0; S_ADB=0; S_CLEWD=0; S_GEMINI=0; S_AUDIO=0
     pgrep -f "node server.js" >/dev/null && S_ST=1
@@ -72,21 +150,9 @@ while true; do
         *"插件管理") plugin_menu ;;
         *"网络设置") configure_download_network ;;
         *"备份与恢复") backup_menu ;;
-        *"高级工具")
-            SUB=$(ui_menu "高级工具箱" \
-                "🦀 ClewdR 管理" \
-                "♊ Gemini CLI代理" \
-                "🏗️  AIStudio 代理" \
-                "🛡️  ADB 保活" \
-                "🔙 返回上级"
-            )
-            case "$SUB" in
-                *"ClewdR"*) source "$TAVX_DIR/modules/clewd.sh"; clewd_menu ;;
-                *"Gemini"*) source "$TAVX_DIR/modules/Gemini_CLI.sh"; gemini_menu ;;
-                *"AIStudio"*) source "$TAVX_DIR/modules/aistudio.sh"; aistudio_menu ;; # 新增这一行
-                *"ADB"*) source "$TAVX_DIR/modules/adb_keepalive.sh"; adb_menu_loop ;;
-                *"返回"*) ;;
-            esac ;;
+        
+        # --- 改动：统一调用动态加载器 ---
+        *"高级工具") load_advanced_tools_menu ;;
         
         *"帮助与支持"*) show_about_page ;;
             
@@ -107,7 +173,6 @@ while true; do
                     echo ""
                     if ui_confirm "确定要关闭所有服务（酒馆、穿透、保活等）吗？"; then
                         ui_spinner "正在停止所有进程..." "
-                            # 1. 优先终止音频心跳的父进程 (防止无限复活)
                             if [ -f '$TAVX_DIR/.audio_heartbeat.pid' ]; then
                                 HB_PID=\$(cat '$TAVX_DIR/.audio_heartbeat.pid')
                                 kill -9 \$HB_PID >/dev/null 2>&1

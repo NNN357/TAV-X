@@ -1,6 +1,8 @@
 #!/bin/bash
-# TAV-X Module: AIStudioBuildProxy Manager
-
+# [METADATA]
+# MODULE_NAME: 🏗️  AIStudio 代理
+# MODULE_ENTRY: aistudio_menu
+# [END_METADATA]
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
 source "$TAVX_DIR/core/utils.sh"

@@ -1,5 +1,8 @@
 #!/bin/bash
-
+# [METADATA]
+# MODULE_NAME: ♊ Gemini CLI代理
+# MODULE_ENTRY: gemini_menu
+# [END_METADATA]
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
 source "$TAVX_DIR/core/utils.sh"

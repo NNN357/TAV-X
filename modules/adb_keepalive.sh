@@ -1,6 +1,8 @@
 #!/bin/bash
-# TAV-X Module: ADB Keep-Alive
-
+# [METADATA]
+# MODULE_NAME: 🛡️  ADB 保活
+# MODULE_ENTRY: adb_menu_loop
+# [END_METADATA]
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
 source "$TAVX_DIR/core/utils.sh"

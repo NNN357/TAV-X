@@ -41,6 +41,8 @@ gemini_proxy/*.log
 SillyTavern/
 bin/
 temp_restore/
+autoglm/
+autoglm_install.log
 
 # --- 机密文件 ---
 .env
@@ -61,3 +63,4 @@ config/cf_token
 !config/plugins.list
 !config/silence.wav
 
+core/ai_launcher.sh

@@ -1,6 +1,8 @@
 #!/bin/bash
-# TAV-X Module: ClewdR Manager
-
+# [METADATA]
+# MODULE_NAME: 🦀 ClewdR 管理
+# MODULE_ENTRY: clewd_menu
+# [END_METADATA]
 source "$TAVX_DIR/core/env.sh"
 source "$TAVX_DIR/core/ui.sh"
 source "$TAVX_DIR/core/utils.sh"

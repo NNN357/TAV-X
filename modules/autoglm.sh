@@ -6,6 +6,7 @@
 
 source "$TAVX_DIR/core/utils.sh"
 
+# --- 变量定义 ---
 AUTOGLM_DIR="$TAVX_DIR/autoglm"
 VENV_DIR="$AUTOGLM_DIR/venv"
 CONFIG_FILE="$TAVX_DIR/config/autoglm.env"
@@ -15,10 +16,32 @@ REPO_URL="Future-404/Open-AutoGLM"
 ADB_KEYBOARD_URL="https://github.com/senzhk/ADBKeyBoard/raw/master/ADBKeyboard.apk"
 TERMUX_API_PKG="com.termux.api"
 
+# --- 辅助函数 ---
 check_uv_installed() {
     if command -v uv &> /dev/null; then return 0; fi
-    ui_print info "正在安装 uv..."
-    if pip install uv; then return 0; else return 1; fi
+    
+    ui_print info "准备安装 uv (本地编译模式)..."
+    echo "----------------------------------------"
+    echo ">>> [Setup] 正在补全 Rust 编译环境..."
+    
+    # 1. 必须安装 Rust 和 Binutils 才能编译 uv
+    pkg install rust binutils -y
+    
+    # 2. 确保 pip 支持代理
+    echo ">>> [Setup] 检查代理支持..."
+    pip install pysocks
+    
+    # 3. 编译安装 uv
+    echo ">>> [Build] 正在编译安装 uv (耗时较长，请耐心等待)..."
+    # 限制并发防止手机卡死
+    export CARGO_BUILD_JOBS=1
+    if pip install uv; then
+        ui_print success "uv 安装成功 (Native)"
+        return 0
+    else
+        ui_print error "uv 安装失败，请检查上方报错。"
+        return 1
+    fi
 }
 
 check_adb_keyboard() {
@@ -36,11 +59,12 @@ check_adb_keyboard() {
                 return 0
             fi
         fi
-        ui_print error "ADB Keyboard 安装失败"
+        ui_print error "安装失败"
     fi
     return 1
 }
 
+# --- 启动器生成 ---
 create_ai_launcher() {
 cat << EOF > "$LAUNCHER_SCRIPT"
 #!/bin/bash
@@ -57,37 +81,22 @@ CONFIG_FILE="$TAVX_DIR/config/autoglm.env"
 AUTOGLM_DIR="$TAVX_DIR/autoglm"
 VENV_DIR="$AUTOGLM_DIR/venv"
 
-# --- 反馈模块 ---
 send_feedback() {
-    local status="$1"
-    local msg="$2"
+    local status="$1"; local msg="$2"
     local clean_msg=$(echo "$msg" | tr '()' '[]' | tr '"' ' ' | tr "'" " ")
     local enable_feedback="${PHONE_AGENT_FEEDBACK:-true}"
     
-    if [ "$status" == "success" ]; then
-        ui_print success "$msg"
-    else
-        ui_print error "$msg"
-    fi
-    
-    if [ "$enable_feedback" != "true" ]; then return 0; fi
+    [ "$status" == "success" ] && ui_print success "$msg" || ui_print error "$msg"
+    [ "$enable_feedback" != "true" ] && return 0
 
     if [ "$status" == "success" ]; then
-        if command -v termux-toast &> /dev/null; then
-            termux-toast -g bottom -b "#00000000" -c "#FFFFFF" "✅ 任务完成"
-        fi
+        command -v termux-toast &>/dev/null && termux-toast -g bottom "✅ 任务完成"
         adb shell cmd notification post -S bigtext -t "AutoGLM 完成" "AutoGLM" "$clean_msg" >/dev/null 2>&1
-        if command -v termux-vibrate &> /dev/null; then
-            termux-vibrate -d 80; sleep 0.15; termux-vibrate -d 80
-        fi
+        command -v termux-vibrate &>/dev/null && { termux-vibrate -d 80; sleep 0.15; termux-vibrate -d 80; }
     else
-        if command -v termux-toast &> /dev/null; then
-            termux-toast -g bottom -b "#00000000" -c "#FF5555" "❌ 任务中断"
-        fi
+        command -v termux-toast &>/dev/null && termux-toast -g bottom "❌ 任务中断"
         adb shell cmd notification post -S bigtext -t "AutoGLM 失败" "AutoGLM" "$clean_msg" >/dev/null 2>&1
-        if command -v termux-vibrate &> /dev/null; then
-            termux-vibrate -d 400
-        fi
+        command -v termux-vibrate &>/dev/null && termux-vibrate -d 400
     fi
 }
 
@@ -97,10 +106,7 @@ check_dependencies() {
         sleep 1
         source "$TAVX_DIR/modules/adb_keepalive.sh"
         adb_menu_loop
-        if ! adb devices | grep -q "device$"; then
-            ui_print error "ADB 连接失败。"
-            exit 1
-        fi
+        if ! adb devices | grep -q "device$"; then ui_print error "连接失败"; exit 1; fi
     fi
 }
 
@@ -112,32 +118,19 @@ main() {
 
     local enable_feedback="${PHONE_AGENT_FEEDBACK:-true}"
     if [ "$enable_feedback" == "true" ] && command -v termux-toast &> /dev/null; then
-        termux-toast -g bottom -b "#00000000" -c "#FFFFFF" "🚀 AutoGLM 已启动..."
+        termux-toast -g bottom "🚀 AutoGLM 已启动..."
     fi
 
-    echo ""
-    ui_print success "🚀 智能体已就绪！"
-    echo -e "${CYAN}>>> 3秒倒计时...${NC}"
-    sleep 3
-
+    echo ""; ui_print success "🚀 智能体已就绪！"
+    echo -e "${CYAN}>>> 3秒倒计时...${NC}"; sleep 3
     cd "$AUTOGLM_DIR" || exit
     
-    if [ $# -eq 0 ]; then
-        python main.py
-    else
-        python main.py "$*"
-    fi
+    if [ $# -eq 0 ]; then python main.py; else python main.py "$*"; fi
     
     EXIT_CODE=$?
     echo ""
-    
-    if [ $EXIT_CODE -eq 0 ]; then
-        send_feedback "success" "任务执行结束。"
-    else
-        send_feedback "error" "程序异常退出 [Code $EXIT_CODE]。"
-    fi
+    [ $EXIT_CODE -eq 0 ] && send_feedback "success" "任务执行结束。" || send_feedback "error" "程序异常退出 [Code $EXIT_CODE]。"
 }
-
 main "$@"
 EOF
     chmod +x "$LAUNCHER_SCRIPT"
@@ -147,63 +140,64 @@ EOF
     fi
 }
 
+# --- 核心流程 ---
 install_autoglm() {
     ui_header "部署 Open-AutoGLM"
     rm -f "$INSTALL_LOG"; touch "$INSTALL_LOG"
     
-    ui_print info "准备系统环境..."
-    local SYS_PKGS="termux-api python-numpy python-pillow python-cryptography libjpeg-turbo libpng libxml2 libxslt clang make"
-    if pkg install root-repo science-repo -y >> "$INSTALL_LOG" 2>&1; then :; fi
-    if pkg install -y -o Dpkg::Options::="--force-confold" $SYS_PKGS >> "$INSTALL_LOG" 2>&1; then :; fi
+    ui_print info "启动全自动安装..."
+    echo -e "${YELLOW}请关注下方日志。${NC}"
+    echo "----------------------------------------"
+
+    (
+        set -e
+        echo ">>> [Phase 1] 安装系统基础库..."
+        local SYS_PKGS="termux-api python-numpy python-pillow python-cryptography libjpeg-turbo libpng libxml2 libxslt clang make rust binutils"
+        pkg install root-repo science-repo -y
+        pkg install -y -o Dpkg::Options::="--force-confold" $SYS_PKGS
+    ) >> "$INSTALL_LOG" 2>&1
     
     check_uv_installed || return
-    
-    if [ -d "$AUTOGLM_DIR" ]; then if ui_confirm "覆盖更新？"; then safe_rm "$AUTOGLM_DIR"; else return; fi; fi
-    
-    prepare_network_strategy "$REPO_URL"
-    local CLONE_CMD="source \"$TAVX_DIR/core/utils.sh\"; git_clone_smart '' '$REPO_URL' '$AUTOGLM_DIR'"
-    if ! ui_spinner "下载核心代码..." "$CLONE_CMD"; then ui_print error "源码下载失败"; return; fi
-    
-    cd "$AUTOGLM_DIR" || return
-    ui_print info "创建运行环境..."
-    uv venv "$VENV_DIR" --system-site-packages >> "$INSTALL_LOG" 2>&1
-    
-    local WHEEL_URL="https://github.com/Future-404/TAV-X/releases/download/assets-v1/autoglm_wheels.tar.gz"
-    local USE_OFFLINE=false
-    
-    ui_print info "尝试下载加速包 (极速模式)..."
-    if download_file_smart "$WHEEL_URL" "wheels.tar.gz"; then
-        if tar -xzf wheels.tar.gz; then
-            USE_OFFLINE=true
-            ui_print success "加速包已就绪！"
-        else
-            ui_print warn "解压失败，回退到在线编译..."
-        fi
-        rm -f wheels.tar.gz
-    else
-        ui_print warn "下载失败，回退到在线编译..."
-    fi
 
-    ui_print info "正在安装依赖..."
-    echo -e "${YELLOW}查看进度: $INSTALL_LOG${NC}"
-    
     (
-        source "$VENV_DIR/bin/activate"
+        set -e
+        echo ">>> [Phase 3] 下载核心代码..."
+        if [ -d "$AUTOGLM_DIR" ]; then rm -rf "$AUTOGLM_DIR"; fi
+        
         auto_load_proxy_env
+        git clone --depth 1 "https://github.com/$REPO_URL" "$AUTOGLM_DIR"
+        cd "$AUTOGLM_DIR" || exit 1
+        
+        echo ">>> [Phase 4] 创建虚拟环境..."
+        python -m venv "$VENV_DIR" --system-site-packages
+        source "$VENV_DIR/bin/activate"
+        
+        echo ">>> [Phase 5] 安装依赖..."
+        
+        local WHEEL_URL="https://github.com/Future-404/TAV-X/releases/download/assets-v1/autoglm_wheels.tar.gz"
+        local USE_OFFLINE=false
+        
+        if download_file_smart "$WHEEL_URL" "wheels.tar.gz"; then
+            if tar -xzf wheels.tar.gz; then USE_OFFLINE=true; fi
+            rm -f wheels.tar.gz
+        fi
         
         cp requirements.txt requirements.tmp
         sed -i '/numpy/d' requirements.tmp
         sed -i '/Pillow/d' requirements.tmp
         sed -i '/cryptography/d' requirements.tmp
         
+        export CARGO_BUILD_JOBS=1
+        
         if [ "$USE_OFFLINE" == "true" ] && [ -d "wheels" ]; then
-            echo ">>> [Mode] 🚀 离线极速安装..."
-            uv pip install --no-index --find-links=./wheels -r requirements.tmp
-            uv pip install --no-index --find-links=./wheels "httpx[socks]"
-            uv pip install --no-index --find-links=./wheels -e .
+            echo ">>> [Mode] 🚀 混合极速安装 (UV Native)..."
+            # 这里的 uv 是本地版，它编译出来的 wheel 必定兼容 Android
+            uv pip install --find-links=./wheels -r requirements.tmp
+            uv pip install --find-links=./wheels "httpx[socks]"
+            uv pip install --find-links=./wheels -e .
             rm -rf wheels
         else
-            echo ">>> [Mode] 🐢 在线编译安装..."
+            echo ">>> [Mode] 🐢 在线编译安装 (UV Native)..."
             if ! uv pip install -r requirements.tmp; then
                  uv pip install -r requirements.tmp -i https://pypi.tuna.tsinghua.edu.cn/simple
             fi
@@ -211,6 +205,8 @@ install_autoglm() {
             uv pip install -e .
         fi
         rm requirements.tmp
+        
+        echo ">>> ✅ 全部安装步骤完成！"
     ) >> "$INSTALL_LOG" 2>&1 &
     
     safe_log_monitor "$INSTALL_LOG"
@@ -221,7 +217,7 @@ install_autoglm() {
     fi
     
     create_ai_launcher
-    ui_print success "部署完成！"
+    ui_print success "部署完成！输入 'ai' 启动。"
     ui_pause
 }
 
@@ -265,7 +261,7 @@ autoglm_menu() {
         echo -e "状态: $status"
         echo -e "提示: 安装后可使用全局命令 ${CYAN}ai${NC} 快速启动"
         echo "----------------------------------------"
-        CHOICE=$(ui_menu "操作" "🚀 启动 (菜单模式)" "⚙️  配置/设置" "📥 安装/重装" "🔙 返回")
+        CHOICE=$(ui_menu "操作" "🚀 启动" "⚙️  配置/设置" "📥 安装/重装" "🔙 返回")
         case "$CHOICE" in
             *"启动"*) start_autoglm ;;
             *"配置"*) configure_autoglm ;;

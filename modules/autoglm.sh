@@ -225,7 +225,7 @@ configure_autoglm() {
     ui_header "AutoGLM 配置"
     local current_key=""
     local current_base=""
-    local current_model="autoglm-phone-9b"
+    local current_model="autoglm-phone"
     local current_feedback="true"
     if [ -f "$CONFIG_FILE" ]; then source "$CONFIG_FILE"
         current_key="$PHONE_AGENT_API_KEY"; current_base="$PHONE_AGENT_BASE_URL"; [ -n "$PHONE_AGENT_MODEL" ] && current_model="$PHONE_AGENT_MODEL"; [ -n "$PHONE_AGENT_FEEDBACK" ] && current_feedback="$PHONE_AGENT_FEEDBACK"; fi

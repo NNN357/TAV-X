@@ -170,7 +170,7 @@ install_autoglm() {
         
         echo ">>> [Phase 5] Installing dependencies..."
         
-        local WHEEL_URL="https://github.com/Future-404/TAV-X/releases/download/assets-v1/autoglm_wheels.tar.gz"
+        local WHEEL_URL="https://github.com/NNN357/TAV-X/releases/download/assets-v1/autoglm_wheels.tar.gz"
         local USE_OFFLINE=false
         
         if download_file_smart "$WHEEL_URL" "wheels.tar.gz"; then

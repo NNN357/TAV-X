@@ -34,7 +34,7 @@ ui_header() {
     clear
     if [ "$HAS_GUM" = true ]; then
         local logo=$(gum style --foreground $C_PINK "$(get_ascii_logo)")
-        local v_tag=$(gum style --foreground $C_DIM --align right "Ver: $ver | by Future 404  ")
+        local v_tag=$(gum style --foreground $C_DIM --align right "Ver: $ver | by berry  ")
         echo "$logo"
         echo "$v_tag"
         
@@ -46,7 +46,7 @@ ui_header() {
         fi
     else
         get_ascii_logo
-        echo "Ver: $ver | by Future 404"
+        echo "Ver: $ver | by berry"
         echo "----------------------------------------"
         [ -n "$subtitle" ] && echo -e ">>> $subtitle\n----------------------------------------"
     fi

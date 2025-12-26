@@ -4,7 +4,7 @@
 AUTHOR_QQ="317032529"
 GROUP_QQ="616353694"
 CONTACT_EMAIL="29006900lz@gmail.com"
-PROJECT_URL="https://github.com/Future-404/TAV-X"
+PROJECT_URL="https://github.com/NNN357/TAV-X"
 SLOGAN="Don't let virtual warmth steal the real warmth you deserve in life."
 UPDATE_SUMMARY="ADB module restructured: Introduced 'Universal/Aggressive' dual-mode keep-alive, added smart diagnostics and risk grading. Removed audio heartbeat dependency, fixed notification widget loss, more stable and secure keep-alive."
 

@@ -2,8 +2,8 @@
 
 **One-click deployment script to turn your Android phone into a personal AI server**
 
-[![GitHub Stars](https://img.shields.io/github/stars/Future-404/TAV-X?style=social)](https://github.com/Future-404/TAV-X/stargazers)
-[![GitHub License](https://img.shields.io/github/license/Future-404/TAV-X)](https://github.com/Future-404/TAV-X/blob/main/LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/NNN357/TAV-X?style=social)](https://github.com/NNN357/TAV-X/stargazers)
+[![GitHub License](https://img.shields.io/github/license/NNN357/TAV-X)](https://github.com/NNN357/TAV-X/blob/main/LICENSE)
 
 ---
 
@@ -42,13 +42,13 @@ TAV-X is a smart installer and management script for deploying [SillyTavern](htt
 Run this single command in Termux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh | bash
+curl -fsSL https://raw.githubusercontent.com/NNN357/TAV-X/main/st.sh | bash
 ```
 
 Or if you prefer wget:
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh | bash
+wget -qO- https://raw.githubusercontent.com/NNN357/TAV-X/main/st.sh | bash
 ```
 
 ### Usage
@@ -172,9 +172,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Contact
 
-- **Author**: Future 404
+- **Author**: berry
 - **QQ Group**: 616353694
-- **GitHub**: [Future-404/TAV-X](https://github.com/Future-404/TAV-X)
+- **GitHub**: [NNN357/TAV-X](https://github.com/NNN357/TAV-X)
 
 ---
 

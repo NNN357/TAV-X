@@ -101,7 +101,7 @@ select_mirror_interactive() {
     for mirror in "${GLOBAL_MIRRORS[@]}"; do
         (
             local start=$(date +%s%N)
-            local test_url="${mirror}https://github.com/Future-404/TAV-X/info/refs?service=git-upload-pack"
+            local test_url="${mirror}https://github.com/NNN357/TAV-X/info/refs?service=git-upload-pack"
             if curl -s -I -m 3 "$test_url" >/dev/null 2>&1; then
                 local end=$(date +%s%N)
                 local dur=$(( (end - start) / 1000000 ))

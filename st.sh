@@ -40,7 +40,11 @@ if [ -n "$MIRROR_LIST" ]; then
     IFS=' ' read -r -a MIRRORS <<< "$MIRROR_LIST"
 else
     MIRRORS=("${DEFAULT_POOL[@]}")
+    MIRRORS=("${DEFAULT_POOL[@]}")
 fi
+
+unalias gum 2>/dev/null
+unset gum 2>/dev/null
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

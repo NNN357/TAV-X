@@ -80,11 +80,8 @@ ui_dashboard() {
             done
         fi
         
-        local line2=$(gum join --vertical --align center \
-            "$(gum style --foreground $C_BLUE "Network: $net_dl")" \
-            "$(gum style --foreground $C_PURPLE "API: $net_api")" \
-        )
-
+        local line2=$(gum join --vertical --align center "$(gum style --foreground $C_BLUE "Network: $net_dl")" "$(gum style --foreground $C_PURPLE "API: $net_api")")
+        
         gum style --border normal --border-foreground $C_DIM --padding "0 1" --margin "0 0 1 0" --align center "$line1" "" "$line2"
     else
         echo "Running: ST[$st] CF[$cf] ADB[$adb] Audio[$audio] Clewd[$clewd] Gemini[$gemini]"

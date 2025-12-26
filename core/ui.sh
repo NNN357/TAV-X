@@ -101,9 +101,11 @@ ui_menu() {
     if [ "$HAS_GUM" = true ]; then
         gum choose --header="" --cursor.foreground $C_PINK --selected.foreground $C_PINK "${options[@]}"
     else
-        echo -e "\n[ $header ]"; local i=1
-        for opt in "${options[@]}"; do echo "$i. $opt"; ((i++)); done
-        read -p "Enter number: " idx; echo "${options[$((idx-1))]}"
+        echo -e "\n[ $header ]" >&2
+        local i=1
+        for opt in "${options[@]}"; do echo "$i. $opt" >&2; ((i++)); done
+        read -p "Enter number: " idx
+        echo "${options[$((idx-1))]}"
     fi
 }
 

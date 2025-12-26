@@ -99,7 +99,15 @@ start_node_server() {
     cd "$INSTALL_DIR" || return 1
     termux-wake-lock
     rm -f "$SERVER_LOG"
-    ui_spinner "Starting SillyTavern service..." "setsid nohup node $MEM_ARGS server.js > '$SERVER_LOG' 2>&1 & sleep 2"
+    ui_spinner "Starting SillyTavern service..." "setsid nohup node $MEM_ARGS server.js > '$SERVER_LOG' 2>&1 & sleep 3"
+    
+    if ! pgrep -f "node server.js" > /dev/null; then
+         ui_print error "Service crashed immediately! (Missing dependencies?)"
+         echo -e "${YELLOW}=== Crash Log (Last 10 lines) ===${NC}"
+         tail -n 10 "$SERVER_LOG"
+         echo -e "${YELLOW}=================================${NC}"
+         echo -e "Tip: Try [Install & Update] -> [Force Reinstall] to fix."
+    fi
 }
 
 detect_protocol_logic() {

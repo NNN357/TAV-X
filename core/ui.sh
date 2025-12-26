@@ -164,9 +164,16 @@ ui_print() {
 }
 
 ui_pause() {
+    echo ""
     if [ "$HAS_GUM" = true ]; then
-        echo ""; gum style --foreground $C_DIM "Press any key to continue..."; read -n 1 -s -r
+        gum style --foreground $C_DIM "Press any key to continue..."
     else
-        echo ""; read -n 1 -s -r -p "Press any key to continue..."
+        echo "Press any key to continue..."
+    fi
+    # Force read from terminal to avoid skipping
+    if [ -t 0 ]; then
+        read -n 1 -s -r
+    else
+        read -n 1 -s -r < /dev/tty
     fi
 }

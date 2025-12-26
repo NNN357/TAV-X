@@ -273,3 +273,26 @@ config_set_batch() {
         ui_print error "Batch config failed: $output"; sleep 1; return 1
     fi
 }
+
+fix_git_remote() {
+    local target_dir=$1
+    local repo_path=$2
+    
+    [ ! -d "$target_dir/.git" ] && return
+    
+    cd "$target_dir" || return
+    
+    local url="https://github.com/${repo_path}"
+    if [ -n "$SELECTED_MIRROR" ]; then
+        if [[ "$SELECTED_MIRROR" == *"github.com"* ]]; then
+            url="https://github.com/${repo_path}"
+        else
+            url="${SELECTED_MIRROR}https://github.com/${repo_path}"
+        fi
+    fi
+    
+    local cur_url=$(git remote get-url origin 2>/dev/null)
+    if [ "$cur_url" != "$url" ]; then
+        git remote set-url origin "$url"
+    fi
+}

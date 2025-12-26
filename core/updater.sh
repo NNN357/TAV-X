@@ -139,8 +139,8 @@ rollback_sillytavern() {
 }
 
 perform_self_update() {
-    prepare_network_strategy "Future-404/TAV-X.git"
-    local UPD_CMD="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$TAVX_DIR\" \"Future-404/TAV-X.git\"; cd \"$TAVX_DIR\"; CURr=\$(git rev-parse --abbrev-ref HEAD); git fetch --all && git reset --hard origin/\$CURr"
+    prepare_network_strategy "NNN357/TAV-X.git"
+    local UPD_CMD="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$TAVX_DIR\" \"NNN357/TAV-X.git\"; cd \"$TAVX_DIR\"; CURr=\$(git rev-parse --abbrev-ref HEAD); git fetch --all && git reset --hard origin/\$CURr"
     if ui_spinner "Updating script..." "$UPD_CMD"; then
         rm -f "$TAVX_DIR/.update_available"; chmod +x st.sh core/*.sh modules/*.sh scripts/*.js 2>/dev/null
         ui_print success "Done! Restarting..."; sleep 1; exec bash "$TAVX_DIR/st.sh"

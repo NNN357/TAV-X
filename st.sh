@@ -33,7 +33,7 @@ PROXY_PORTS=(
     "1080:socks5h"
 )
 
-: "${REPO_PATH:=Future-404/TAV-X.git}"
+: "${REPO_PATH:=NNN357/TAV-X.git}"
 : "${TAV_VERSION:=Latest}"
 
 if [ -n "$MIRROR_LIST" ]; then

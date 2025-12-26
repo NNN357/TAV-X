@@ -257,9 +257,21 @@ if git clone --depth 1 "$DL_URL" "$TAVX_DIR"; then
     sed -i '/alias st=/d' "$SHELL_RC" 2>/dev/null
     echo "alias st='bash $TAVX_DIR/st.sh'" >> "$SHELL_RC"
 
-    if ! command -v gum &> /dev/null; then
+    # Try to use gum if available, or install if missing
+    if command -v gum &> /dev/null; then
+        # Check if existing gum is broken
+        if ! gum style "test" &>/dev/null; then
+            echo -e "${YELLOW}>>> Detected broken Gum installation, attempting reinstall...${NC}"
+            pkg reinstall gum -y >/dev/null 2>&1
+        fi
+    else
         echo -e "${YELLOW}>>> Deploying UI engine (Gum)...${NC}"
         pkg install gum -y >/dev/null 2>&1
+    fi
+    
+    # Final check - if gum is still broken, we proceed without it (Text Mode)
+    if ! command -v gum &>/dev/null || ! gum style "test" &>/dev/null; then
+         echo -e "${YELLOW}⚠️ UI Engine failed to load. Switching to Text Mode.${NC}"
     fi
 
     echo ""

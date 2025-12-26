@@ -2,7 +2,12 @@
 # TAV-X Core: UI Adapter
 
 HAS_GUM=false
-if command -v gum &> /dev/null; then HAS_GUM=true; fi
+if command -v gum &> /dev/null; then
+    # Smoke test: check if gum actually works (user reported broken package)
+    if gum style "test" &>/dev/null; then
+        HAS_GUM=true
+    fi
+fi
 
 C_PINK=212    
 C_PURPLE=99   

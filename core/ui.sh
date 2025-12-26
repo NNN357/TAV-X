@@ -104,7 +104,18 @@ ui_menu() {
         echo -e "\n[ $header ]" >&2
         local i=1
         for opt in "${options[@]}"; do echo "$i. $opt" >&2; ((i++)); done
-        read -p "Enter number: " idx
+        
+        # Force read from terminal to avoid stdin pollution
+        if [ -t 0 ]; then
+             read -p "Enter number: " idx
+        else
+             read -p "Enter number: " idx < /dev/tty
+        fi
+        
+        # Sanitize: ensure it is a number
+        idx=$(echo "$idx" | tr -cd '0-9')
+        if [ -z "$idx" ]; then idx=1; fi
+        
         echo "${options[$((idx-1))]}"
     fi
 }

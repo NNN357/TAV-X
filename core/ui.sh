@@ -14,12 +14,12 @@ C_YELLOW=220
 
 get_ascii_logo() {
     cat << "LOGO_END"
-████████╗░█████╗░██╗░░░██╗  ██╗░░██╗
-╚══██╔══╝██╔══██╗██║░░░██║  ╚██╗██╔╝
-░░░██║░░░███████║╚██╗░██╔╝  ░╚███╔╝░
-░░░██║░░░██╔══██║░╚████╔╝░  ░██╔██╗░
-░░░██║░░░██║░░██║░░╚██╔╝░░  ██╔╝╚██╗
-░░░╚═╝░░░╚═╝░░╚═╝░░░╚═╝░░░  ╚═╝░░╚═╝
+████████╗░█████╗░██╗░░░██╗  ██╗░░██╗
+╚══██╔══╝██╔══██╗██║░░░██║  ╚██╗██╔╝
+░░░██║░░░███████║╚██╗░██╔╝  ░╚███╔╝░
+░░░██║░░░██╔══██║░╚████╔╝░  ░██╔██╗░
+░░░██║░░░██║░░██║░░╚██╔╝░░  ██╔╝╚██╗
+░░░╚═╝░░░╚═╝░░╚═╝░░░╚═╝░░░  ╚═╝░░╚═╝
                 T A V   X
 LOGO_END
 }
@@ -66,16 +66,16 @@ ui_dashboard() {
 
         local active_items=()
         
-        [ "$st" == "1" ]     && active_items+=("$(make_dynamic_badge "酒馆" $st)")
-        [ "$cf" == "1" ]     && active_items+=("$(make_dynamic_badge "穿透" $cf)")
+        [ "$st" == "1" ]     && active_items+=("$(make_dynamic_badge "Tavern" $st)")
+        [ "$cf" == "1" ]     && active_items+=("$(make_dynamic_badge "Tunnel" $cf)")
         [ "$adb" == "1" ]    && active_items+=("$(make_dynamic_badge "ADB" $adb)")
-        [ "$audio" == "1" ]  && active_items+=("$(make_dynamic_badge "🎵保活" $audio)")
+        [ "$audio" == "1" ]  && active_items+=("$(make_dynamic_badge "🎵KeepAlive" $audio)")
         [ "$clewd" == "1" ]  && active_items+=("$(make_dynamic_badge "ClewdR" $clewd)")
         [ "$gemini" == "1" ] && active_items+=("$(make_dynamic_badge "Gemini" $gemini)")
 
         local line1=""
         if [ ${#active_items[@]} -eq 0 ]; then
-            line1=$(gum style --foreground $C_DIM "💤 等待服务启动...")
+            line1=$(gum style --foreground $C_DIM "💤 Waiting for services to start...")
         else
             for item in "${active_items[@]}"; do
                 line1="${line1}${item}${spacer}"
@@ -83,15 +83,15 @@ ui_dashboard() {
         fi
         
         local line2=$(gum join --vertical --align center \
-            "$(gum style --foreground $C_BLUE "网络: $net_dl")" \
-            "$(gum style --foreground $C_PURPLE "API : $net_api")" \
+            "$(gum style --foreground $C_BLUE "Network: $net_dl")" \
+            "$(gum style --foreground $C_PURPLE "API: $net_api")" \
         )
 
         gum style --border normal --border-foreground $C_DIM --padding "0 1" --margin "0 0 1 0" --align center "$line1" "" "$line2"
     else
-        echo "运行中: ST[$st] CF[$cf] ADB[$adb] Audio[$audio] Clewd[$clewd] Gemini[$gemini]"
-        echo "下载: $net_dl"
-        echo "API : $net_api"
+        echo "Running: ST[$st] CF[$cf] ADB[$adb] Audio[$audio] Clewd[$clewd] Gemini[$gemini]"
+        echo "Download: $net_dl"
+        echo "API: $net_api"
         echo "----------------------------------------"
     fi
 }
@@ -103,7 +103,7 @@ ui_menu() {
     else
         echo -e "\n[ $header ]"; local i=1
         for opt in "${options[@]}"; do echo "$i. $opt"; ((i++)); done
-        read -p "请输入编号: " idx; echo "${options[$((idx-1))]}"
+        read -p "Enter number: " idx; echo "${options[$((idx-1))]}"
     fi
 }
 
@@ -123,7 +123,7 @@ ui_input() {
 ui_confirm() {
     local prompt="$1"
     if [ "$HAS_GUM" = true ]; then
-        gum confirm "$prompt" --affirmative "是" --negative "否" --selected.background $C_PINK
+        gum confirm "$prompt" --affirmative "Yes" --negative "No" --selected.background $C_PINK
     else
         read -p "$prompt (y/n): " c; [[ "$c" == "y" || "$c" == "Y" ]]
     fi
@@ -152,8 +152,8 @@ ui_print() {
 
 ui_pause() {
     if [ "$HAS_GUM" = true ]; then
-        echo ""; gum style --foreground $C_DIM "按任意键继续..."; read -n 1 -s -r
+        echo ""; gum style --foreground $C_DIM "Press any key to continue..."; read -n 1 -s -r
     else
-        echo ""; read -n 1 -s -r -p "按任意键继续..."
+        echo ""; read -n 1 -s -r -p "Press any key to continue..."
     fi
 }

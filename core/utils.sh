@@ -8,15 +8,15 @@ fi
 
 safe_rm() {
     local target="$1"
-    if [[ -z "$target" ]]; then ui_print error "安全拦截: 空路径！"; return 1; fi
+    if [[ -z "$target" ]]; then ui_print error "Safety block: Empty path!"; return 1; fi
     if [[ "$target" == "/" ]] || [[ "$target" == "$HOME" ]] || [[ "$target" == "/usr" ]] || [[ "$target" == "/bin" ]]; then
-        ui_print error "安全拦截: 高危目录 ($target)！"; return 1; fi
+        ui_print error "Safety block: Dangerous directory ($target)!"; return 1; fi
     if [[ "$target" == "." ]] || [[ "$target" == ".." ]]; then
-        ui_print error "安全拦截: 相对路径无效！"; return 1; fi
+        ui_print error "Safety block: Invalid relative path!"; return 1; fi
     rm -rf "$target"
 }
 
-pause() { echo ""; read -n 1 -s -r -p "按任意键继续..."; echo ""; }
+pause() { echo ""; read -n 1 -s -r -p "Press any key to continue..."; echo ""; }
 
 send_analytics() {
     (
@@ -29,12 +29,12 @@ send_analytics() {
 
 safe_log_monitor() {
     local file=$1
-    if [ ! -f "$file" ]; then echo "暂无日志文件: $(basename "$file")"; sleep 1; return; fi
+    if [ ! -f "$file" ]; then echo "No log file: $(basename "$file")"; sleep 1; return; fi
     clear
-    echo -e "${CYAN}=== 正在实时监控日志 ===${NC}"
-    echo -e "${YELLOW}提示: 按 Ctrl+C 即可停止监控并返回菜单${NC}"
+    echo -e "${CYAN}=== Real-time Log Monitor ===${NC}"
+    echo -e "${YELLOW}Tip: Press Ctrl+C to stop monitoring and return to menu${NC}"
     echo "----------------------------------------"
-    trap 'echo -e "\n${GREEN}>>> 已停止监控，正在返回...${NC}"; return' SIGINT
+    trap 'echo -e "\n${GREEN}>>> Stopped monitoring, returning...${NC}"; return' SIGINT
     tail -n 30 -f "$file"
     trap - SIGINT
 }
@@ -92,8 +92,8 @@ prepare_network_strategy() {
 select_mirror_interactive() {
     if [ -n "$SELECTED_MIRROR" ]; then return 0; fi
 
-    ui_header "镜像源测速选择"
-    echo -e "${CYAN}正在并发测速，请稍候...${NC}"
+    ui_header "Mirror Speed Test"
+    echo -e "${CYAN}Running concurrent speed test, please wait...${NC}"
     echo "----------------------------------------"
     
     local tmp_race_file="$TAVX_DIR/.mirror_race"
@@ -112,7 +112,7 @@ select_mirror_interactive() {
     wait
 
     if [ ! -s "$tmp_race_file" ]; then
-        ui_print error "所有镜像源均连接超时！请检查网络。"
+        ui_print error "All mirror sources timed out! Check your network."
         return 1
     fi
 
@@ -131,10 +131,10 @@ select_mirror_interactive() {
         RAW_URLS+=("$url")
     done < "$tmp_race_file"
     
-    OPTIONS+=("🌐 官方源 (直连)")
+    OPTIONS+=("🌐 Official Source (Direct)")
     RAW_URLS+=("https://github.com/")
 
-    local CHOICE_TEXT=$(ui_menu "请根据延迟选择最稳定的源" "${OPTIONS[@]}")
+    local CHOICE_TEXT=$(ui_menu "Select the most stable source based on latency" "${OPTIONS[@]}")
     
     local CHOICE_IDX=-1
     for i in "${!OPTIONS[@]}"; do
@@ -144,10 +144,10 @@ select_mirror_interactive() {
     if [ "$CHOICE_IDX" -ge 0 ]; then
         SELECTED_MIRROR="${RAW_URLS[$CHOICE_IDX]}"
         export SELECTED_MIRROR
-        ui_print success "已选定: $SELECTED_MIRROR"
+        ui_print success "Selected: $SELECTED_MIRROR"
         return 0
     else
-        ui_print warn "默认使用第一项。"
+        ui_print warn "Defaulting to first option."
         SELECTED_MIRROR="${RAW_URLS[0]}"
         export SELECTED_MIRROR
         return 0
@@ -233,14 +233,14 @@ npm_install_smart() {
     
     if [ $proxy_active -eq 0 ]; then
         npm config delete registry
-        if ui_spinner "NPM 安装 (代理加速)..." "env http_proxy='$http_proxy' https_proxy='$https_proxy' $NPM_BASE"; then return 0; fi
+        if ui_spinner "NPM Install (Proxy Accelerated)..." "env http_proxy='$http_proxy' https_proxy='$https_proxy' $NPM_BASE"; then return 0; fi
     fi
     
     npm config set registry "https://registry.npmmirror.com"
-    if ui_spinner "NPM 安装中 (淘宝源)..." "$NPM_BASE"; then
+    if ui_spinner "NPM Installing (Taobao Mirror)..." "$NPM_BASE"; then
         npm config delete registry; return 0
     else
-        ui_print error "依赖安装失败。"; npm config delete registry; return 1
+        ui_print error "Dependency installation failed."; npm config delete registry; return 1
     fi
 }
 
@@ -254,15 +254,15 @@ config_get() {
 
 config_set() {
     local key=$1; local value=$2
-    if [ ! -f "$JS_TOOL" ]; then ui_print error "找不到配置工具"; return 1; fi
+    if [ ! -f "$JS_TOOL" ]; then ui_print error "Config tool not found"; return 1; fi
     local output; output=$(node "$JS_TOOL" set "$key" "$value" 2>&1)
     local status=$?
-    if [ $status -eq 0 ]; then return 0; else ui_print error "设置失败 [$key]: $output"; sleep 1; return 1; fi
+    if [ $status -eq 0 ]; then return 0; else ui_print error "Set failed [$key]: $output"; sleep 1; return 1; fi
 }
 
 config_set_batch() {
     local json_str=$1
-    if [ ! -f "$JS_TOOL" ]; then ui_print error "找不到配置工具"; return 1; fi
+    if [ ! -f "$JS_TOOL" ]; then ui_print error "Config tool not found"; return 1; fi
     
     local output; output=$(node "$JS_TOOL" set-batch "$json_str" 2>&1)
     local status=$?
@@ -270,6 +270,6 @@ config_set_batch() {
     if [ $status -eq 0 ]; then
         return 0
     else
-        ui_print error "批量配置失败: $output"; sleep 1; return 1
+        ui_print error "Batch config failed: $output"; sleep 1; return 1
     fi
 }

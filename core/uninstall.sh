@@ -5,11 +5,11 @@ source "$TAVX_DIR/core/ui.sh"
 source "$TAVX_DIR/core/utils.sh"
 
 verify_kill_switch() {
-    local TARGET_PHRASE="我已知此操作风险并且已做好备份"
+    local TARGET_PHRASE="I understand the risks and have made a backup"
     
-    ui_header "⚠️ 高危操作安全确认"
-    echo -e "${RED}警告：此操作不可逆！数据将永久丢失！${NC}"
-    echo -e "为了确认是您本人操作，请准确输入以下文字："
+    ui_header "⚠️ High-Risk Operation Confirmation"
+    echo -e "${RED}Warning: This operation is irreversible! Data will be permanently lost!${NC}"
+    echo -e "To confirm this is you, please type the following phrase exactly:"
     echo ""
     if [ "$HAS_GUM" = true ]; then
         gum style --border double --border-foreground 196 --padding "0 1" --foreground 220 "$TARGET_PHRASE"
@@ -18,12 +18,12 @@ verify_kill_switch() {
     fi
     echo ""
     
-    local input=$(ui_input "在此输入确认语" "" "false")
+    local input=$(ui_input "Type confirmation phrase here" "" "false")
     
     if [ "$input" == "$TARGET_PHRASE" ]; then
         return 0
     else
-        ui_print error "验证失败！文字不匹配，操作已取消。"
+        ui_print error "Verification failed! Text doesn't match, operation cancelled."
         ui_pause
         return 1
     fi
@@ -32,10 +32,10 @@ verify_kill_switch() {
 uninstall_st() {
     if ! verify_kill_switch; then return; fi
     
-    if ui_spinner "正在删除酒馆数据..." "source \"$TAVX_DIR/core/utils.sh\"; safe_rm '$INSTALL_DIR'"; then
-        ui_print success "SillyTavern 已卸载。"
+    if ui_spinner "Deleting SillyTavern data..." "source \"$TAVX_DIR/core/utils.sh\"; safe_rm '$INSTALL_DIR'"; then
+        ui_print success "SillyTavern uninstalled."
     else
-        ui_print error "删除失败，请检查权限。"
+        ui_print error "Deletion failed, please check permissions."
     fi
     ui_pause
 }
@@ -46,20 +46,20 @@ uninstall_clewd() {
     
     pkill -f "clewdr"
     
-    if ui_spinner "正在清除 ClewdR..." "source \"$TAVX_DIR/core/utils.sh\"; safe_rm '$CLEWD_DIR'"; then
-        ui_print success "ClewdR 模块已卸载。"
+    if ui_spinner "Removing ClewdR..." "source \"$TAVX_DIR/core/utils.sh\"; safe_rm '$CLEWD_DIR'"; then
+        ui_print success "ClewdR module uninstalled."
     else
-        ui_print error "删除失败。"
+        ui_print error "Deletion failed."
     fi
     ui_pause
 }
 
 uninstall_gemini() {
     local GEMINI_DIR="$TAVX_DIR/gemini_proxy"
-    ui_header "卸载 Gemini 代理"
+    ui_header "Uninstall Gemini Proxy"
     
     if [ ! -d "$GEMINI_DIR" ]; then
-        ui_print warn "未检测到 Gemini 模块。"
+        ui_print warn "Gemini module not detected."
         ui_pause; return
     fi
 
@@ -67,43 +67,43 @@ uninstall_gemini() {
     
     pkill -f "run.py"
     
-    if ui_spinner "正在清除 Gemini 模块..." "source \"$TAVX_DIR/core/utils.sh\"; safe_rm '$GEMINI_DIR'"; then
-        ui_print success "Gemini 代理及凭据已卸载。"
+    if ui_spinner "Removing Gemini module..." "source \"$TAVX_DIR/core/utils.sh\"; safe_rm '$GEMINI_DIR'"; then
+        ui_print success "Gemini proxy and credentials uninstalled."
     else
-        ui_print error "删除失败。"
+        ui_print error "Deletion failed."
     fi
     ui_pause
 }
 
 uninstall_adb() {
     local ADB_DIR="$TAVX_DIR/adb_tools"
-    ui_header "卸载 ADB 组件"
+    ui_header "Uninstall ADB Components"
     
     if [ ! -d "$ADB_DIR" ] && ! command -v adb &> /dev/null; then
-        ui_print warn "未检测到 ADB 组件。"
+        ui_print warn "ADB components not detected."
         ui_pause; return
     fi
 
-    echo -e "此操作将清理 TAV-X 管理的 ADB 文件及配置。"
-    if ! ui_confirm "确认继续吗？"; then return; fi
+    echo -e "This will clean up TAV-X managed ADB files and config."
+    if ! ui_confirm "Confirm continue?"; then return; fi
 
     if [ -d "$ADB_DIR" ]; then
-        ui_spinner "正在删除本地文件..." "source \"$TAVX_DIR/core/utils.sh\"; safe_rm '$ADB_DIR'"
+        ui_spinner "Deleting local files..." "source \"$TAVX_DIR/core/utils.sh\"; safe_rm '$ADB_DIR'"
         sed -i '/adb_tools\/platform-tools/d' "$HOME/.bashrc"
-        ui_print success "本地组件及环境变量已清理。"
+        ui_print success "Local components and environment variables cleaned."
     fi
 
     if command -v adb &> /dev/null; then
         echo ""
-        echo -e "${YELLOW}检测到系统已安装 android-tools (pkg)。${NC}"
-        if ui_confirm "是否连同Google  ADB 一起卸载？"; then
-            if ui_spinner "卸载系统包..." "pkg uninstall android-tools -y"; then
-                ui_print success "Google ADB 已卸载。"
+        echo -e "${YELLOW}System android-tools (pkg) detected.${NC}"
+        if ui_confirm "Also uninstall Google ADB?"; then
+            if ui_spinner "Uninstalling system package..." "pkg uninstall android-tools -y"; then
+                ui_print success "Google ADB uninstalled."
             else
-                ui_print error "卸载失败。"
+                ui_print error "Uninstall failed."
             fi
         else
-            ui_print info "已保留系统 ADB。"
+            ui_print info "System ADB kept."
         fi
     fi
     
@@ -111,32 +111,32 @@ uninstall_adb() {
 }
 
 uninstall_deps() {
-    ui_header "卸载环境依赖"
-    echo -e "${RED}警告：这将卸载 Node.js, Cloudflared 等组件。${NC}"
-    echo -e "如果您的 Termux 中有其他软件依赖它们，可能会导致崩溃。"
+    ui_header "Uninstall Dependencies"
+    echo -e "${RED}Warning: This will uninstall Node.js, Cloudflared and other components.${NC}"
+    echo -e "If other software in your Termux depends on them, it may cause crashes."
     echo ""
     
     if ! verify_kill_switch; then return; fi
     
     local PKGS="nodejs nodejs-lts cloudflared git android-tools"
     
-    if ui_spinner "正在卸载系统包..." "pkg uninstall $PKGS -y"; then
-        ui_print success "依赖环境已清理。"
-        echo "提示: Gum (UI组件) 被保留以维持脚本运行。"
+    if ui_spinner "Uninstalling system packages..." "pkg uninstall $PKGS -y"; then
+        ui_print success "Dependencies cleaned."
+        echo "Note: Gum (UI component) is kept to maintain script functionality."
     else
-        ui_print error "卸载过程出现错误。"
+        ui_print error "Errors occurred during uninstall."
     fi
     ui_pause
 }
 
 full_wipe() {
-    ui_header "一键彻底卸载 (Factory Reset)"
-    echo -e "${RED}危险等级：⭐⭐⭐⭐⭐${NC}"
-    echo -e "此操作将执行以下所有动作："
-    echo -e "  1. 删除 SillyTavern 所有数据"
-    echo -e "  2. 删除 ClewdR、Gemini、ADB 等扩展模块"
-    echo -e "  3. 删除 TAV-X 脚本及配置"
-    echo -e "  4. 清理环境变量 (.bashrc)"
+    ui_header "Complete Uninstall (Factory Reset)"
+    echo -e "${RED}Danger Level: ⭐⭐⭐⭐⭐${NC}"
+    echo -e "This will perform all of the following:"
+    echo -e "  1. Delete all SillyTavern data"
+    echo -e "  2. Delete ClewdR, Gemini, ADB and other modules"
+    echo -e "  3. Delete TAV-X script and config"
+    echo -e "  4. Clean environment variables (.bashrc)"
     echo ""
     
     if ! verify_kill_switch; then return; fi
@@ -146,7 +146,7 @@ full_wipe() {
     pkill -f "clewdr"
     pkill -f "run.py"
     
-    ui_spinner "正在执行清理..." "
+    ui_spinner "Performing cleanup..." "
         source \"$TAVX_DIR/core/utils.sh\"
         safe_rm '$INSTALL_DIR'
         safe_rm '$TAVX_DIR/clewdr'
@@ -156,10 +156,10 @@ full_wipe() {
         sed -i '/adb_tools\/platform-tools/d' '$HOME/.bashrc'
     "
     
-    ui_print success "业务数据已清除。"
+    ui_print success "Business data cleared."
     echo ""
-    echo -e "${YELLOW}最后一步：自毁程序启动...${NC}"
-    echo -e "感谢您的使用，再见！👋"
+    echo -e "${YELLOW}Final step: Self-destruct initiated...${NC}"
+    echo -e "Thank you for using TAV-X, goodbye! 👋"
     sleep 2
     safe_rm "$TAVX_DIR"
     
@@ -168,18 +168,18 @@ full_wipe() {
 
 uninstall_menu() {
     while true; do
-        ui_header "卸载与重置中心"
-        echo -e "${RED}⚠️  请谨慎操作，数据无价！${NC}"
+        ui_header "Uninstall & Reset Center"
+        echo -e "${RED}⚠️  Please proceed with caution, data is priceless!${NC}"
         echo ""
         
-        CHOICE=$(ui_menu "请选择操作" \
-            "🗑️ 卸载 SillyTavern" \
-            "🦀 卸载 ClewdR 模块" \
-            "♊ 卸载 Gemini 模块" \
-            "🤖 卸载 ADB 组件" \
-            "📦 卸载环境依赖" \
-            "💥 一键彻底毁灭(全清)" \
-            "🔙 返回上级"
+        CHOICE=$(ui_menu "Select action" \
+            "🗑️ Uninstall SillyTavern" \
+            "🦀 Uninstall ClewdR Module" \
+            "♊ Uninstall Gemini Module" \
+            "🤖 Uninstall ADB Components" \
+            "📦 Uninstall Dependencies" \
+            "💥 Complete Wipe (Full Reset)" \
+            "🔙 Back"
         )
         
         case "$CHOICE" in
@@ -187,9 +187,9 @@ uninstall_menu() {
             *"ClewdR"*) uninstall_clewd ;;
             *"Gemini"*) uninstall_gemini ;;
             *"ADB"*) uninstall_adb ;;
-            *"环境依赖"*) uninstall_deps ;;
-            *"彻底毁灭"*) full_wipe ;;
-            *"返回"*) return ;;
+            *"Dependencies"*) uninstall_deps ;;
+            *"Complete Wipe"*) full_wipe ;;
+            *"Back"*) return ;;
         esac
     done
 }

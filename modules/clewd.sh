@@ -1,6 +1,6 @@
 #!/bin/bash
 # [METADATA]
-# MODULE_NAME: 🦀 ClewdR 管理
+# MODULE_NAME: 🦀 ClewdR Manager
 # MODULE_ENTRY: clewd_menu
 # [END_METADATA]
 source "$TAVX_DIR/core/env.sh"
@@ -13,10 +13,10 @@ LOG_FILE="$CLEWD_DIR/clewdr.log"
 SECRETS_FILE="$CLEWD_DIR/secrets.env"
 
 install_clewdr() {
-    ui_header "安装 ClewdR"
+    ui_header "Install ClewdR"
 
     if ! command -v unzip &> /dev/null; then
-        ui_print warn "正在安装解压工具..."
+        ui_print warn "Installing unzip tool..."
         pkg install unzip -y >/dev/null 2>&1
     fi
 
@@ -39,18 +39,18 @@ install_clewdr() {
         fi
     "
 
-    if ui_spinner "正在下载并安装 (智能加速)..." "$CMD"; then
-        ui_print success "安装完成！"
+    if ui_spinner "Downloading and installing (Smart Acceleration)..." "$CMD"; then
+        ui_print success "Installation complete!"
     else
-        ui_print error "下载失败，请检查网络。"
+        ui_print error "Download failed, please check network."
     fi
     ui_pause
 }
 
 start_clewdr() {
-    ui_header "启动 ClewdR"
+    ui_header "Start ClewdR"
     if [ ! -f "$BIN_FILE" ]; then
-        if ui_confirm "未检测到程序，是否立即安装？"; then
+        if ui_confirm "Program not detected, install now?"; then
             install_clewdr
             [ ! -f "$BIN_FILE" ] && return
         else return; fi
@@ -58,36 +58,36 @@ start_clewdr() {
 
     pkill -f "$BIN_FILE"
     cd "$CLEWD_DIR" || return
-    if ui_spinner "正在启动后台服务..." "setsid nohup '$BIN_FILE' > '$LOG_FILE' 2>&1 & sleep 3"; then
+    if ui_spinner "Starting background service..." "setsid nohup '$BIN_FILE' > '$LOG_FILE' 2>&1 & sleep 3"; then
         if pgrep -f "$BIN_FILE" > /dev/null; then
             local API_PASS=$(grep "API Password:" "$LOG_FILE" | head -n 1 | awk '{print $3}')
             local WEB_PASS=$(grep "Web Admin Password:" "$LOG_FILE" | head -n 1 | awk '{print $4}')
             echo "API_PASS=$API_PASS" > "$SECRETS_FILE"
             echo "WEB_PASS=$WEB_PASS" >> "$SECRETS_FILE"
 
-            ui_print success "服务已启动！"
+            ui_print success "Service started!"
             echo ""
             
             if [ "$HAS_GUM" = true ]; then
-                echo -e " $(gum style --foreground 212 "📊 管理面板 (Web)")"
-                echo -e "   地址: $(gum style --foreground 39 "http://127.0.0.1:8484")"
-                echo -e "   密码: $(gum style --foreground 220 "${WEB_PASS:-未知}")"
+                echo -e " $(gum style --foreground 212 "📊 Web Admin Panel")"
+                echo -e "   URL: $(gum style --foreground 39 "http://127.0.0.1:8484")"
+                echo -e "   Password: $(gum style --foreground 220 "${WEB_PASS:-Unknown}")"
                 echo ""
-                echo -e " $(gum style --foreground 212 "🔌 API 接口 (SillyTavern)")"
-                echo -e "   地址: $(gum style --foreground 39 "http://127.0.0.1:8484/v1")"
-                echo -e "   密钥: $(gum style --foreground 220 "${API_PASS:-未知}")"
+                echo -e " $(gum style --foreground 212 "🔌 API Endpoint (SillyTavern)")"
+                echo -e "   URL: $(gum style --foreground 39 "http://127.0.0.1:8484/v1")"
+                echo -e "   Key: $(gum style --foreground 220 "${API_PASS:-Unknown}")"
             else
-                echo "📊 管理面板: http://127.0.0.1:8484"
-                echo "   密码: ${WEB_PASS:-未知}"
+                echo "📊 Admin Panel: http://127.0.0.1:8484"
+                echo "   Password: ${WEB_PASS:-Unknown}"
                 echo ""
-                echo "🔌 API 地址: http://127.0.0.1:8484/v1"
-                echo "   密钥: ${API_PASS:-未知}"
+                echo "🔌 API URL: http://127.0.0.1:8484/v1"
+                echo "   Key: ${API_PASS:-Unknown}"
             fi
         else
-            ui_print error "启动失败，请检查日志。"
+            ui_print error "Startup failed, please check logs."
         fi
     else
-        ui_print error "启动超时。"
+        ui_print error "Startup timeout."
     fi
     ui_pause
 }
@@ -95,9 +95,9 @@ start_clewdr() {
 stop_clewdr() {
     if pgrep -f "$BIN_FILE" > /dev/null; then
         pkill -f "$BIN_FILE"
-        ui_print success "服务已停止。"
+        ui_print success "Service stopped."
     else
-        ui_print warn "服务未运行。"
+        ui_print warn "Service not running."
     fi
     sleep 1
 }
@@ -105,54 +105,54 @@ stop_clewdr() {
 show_secrets() {
     if [ -f "$SECRETS_FILE" ]; then
         source "$SECRETS_FILE"
-        ui_header "连接信息"
+        ui_header "Connection Info"
         
         if [ "$HAS_GUM" = true ]; then
-            echo -e " $(gum style --foreground 212 "📊 Web 管理端")"
+            echo -e " $(gum style --foreground 212 "📊 Web Admin")"
             echo -e "   🔗 $(gum style --foreground 39 "http://127.0.0.1:8484")"
             echo -e "   🔑 $(gum style --foreground 220 "${WEB_PASS}")"
             echo ""
-            echo -e " $(gum style --foreground 212 "🔌 API 接口")"
+            echo -e " $(gum style --foreground 212 "🔌 API Endpoint")"
             echo -e "   🔗 $(gum style --foreground 39 "http://127.0.0.1:8484/v1")"
             echo -e "   🔑 $(gum style --foreground 220 "${API_PASS}")"
         else
-            echo "Web密码: ${WEB_PASS}"
-            echo "API密钥: ${API_PASS}"
+            echo "Web Password: ${WEB_PASS}"
+            echo "API Key: ${API_PASS}"
         fi
     else
-        ui_print error "暂无缓存，请先启动服务。"
+        ui_print error "No cache available, please start service first."
     fi
     ui_pause
 }
 
 clewd_menu() {
     while true; do
-        ui_header "ClewdR AI 反代管理"
+        ui_header "ClewdR AI Reverse Proxy Manager"
 
         if pgrep -f "$BIN_FILE" >/dev/null; then
-            STATUS="${GREEN}● 运行中${NC}"
+            STATUS="${GREEN}● Running${NC}"
         else
-            STATUS="${RED}● 已停止${NC}"
+            STATUS="${RED}● Stopped${NC}"
         fi
-        echo -e "状态: $STATUS"
+        echo -e "Status: $STATUS"
         echo ""
 
-        CHOICE=$(ui_menu "请选择操作" \
-            "🚀 启动/重启服务" \
-            "🔑 查看密码信息" \
-            "📜 查看实时日志" \
-            "🛑 停止后台服务" \
-            "📥 强制更新重装" \
-            "🔙 返回主菜单"
+        CHOICE=$(ui_menu "Select action" \
+            "🚀 Start/Restart Service" \
+            "🔑 View Password Info" \
+            "📜 View Live Logs" \
+            "🛑 Stop Service" \
+            "📥 Force Update/Reinstall" \
+            "🔙 Back to Main Menu"
         )
 
         case "$CHOICE" in
-            *"启动"*) start_clewdr ;;
-            *"密码"*) show_secrets ;;
-            *"日志"*) safe_log_monitor "$LOG_FILE" ;;
-            *"停止"*) stop_clewdr ;;
-            *"更新"*) install_clewdr ;;
-            *"返回"*) return ;;
+            *"Start"*) start_clewdr ;;
+            *"Password"*) show_secrets ;;
+            *"Logs"*) safe_log_monitor "$LOG_FILE" ;;
+            *"Stop"*) stop_clewdr ;;
+            *"Update"*) install_clewdr ;;
+            *"Back"*) return ;;
         esac
     done
 }

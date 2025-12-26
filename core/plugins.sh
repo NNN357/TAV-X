@@ -15,10 +15,10 @@ is_installed() {
 
 install_single_plugin() {
     local name=$1; local repo=$2; local s=$3; local c=$4; local dir=$5
-    ui_header "安装插件: $name"
+    ui_header "Installing Plugin: $name"
     
     if is_installed "$dir"; then
-        if ! ui_confirm "插件已存在，是否重新安装？"; then return; fi
+        if ! ui_confirm "Plugin already exists, reinstall?"; then return; fi
     fi
 
     prepare_network_strategy "$repo"
@@ -35,19 +35,19 @@ install_single_plugin() {
     
     local WRAP_CMD="source \"$TAVX_DIR/core/utils.sh\"; $TASKS"
     
-    if ui_spinner "正在下载插件 (智能优选)..." "$WRAP_CMD"; then
-        ui_print success "安装完成！"
+    if ui_spinner "Downloading plugin (Smart Selection)..." "$WRAP_CMD"; then
+        ui_print success "Installation complete!"
     else
-        ui_print error "安装失败，请检查网络。"
+        ui_print error "Installation failed, please check network."
     fi
     ui_pause
 }
 
 list_install_menu() {
-    if [ ! -f "$PLUGIN_LIST_FILE" ]; then ui_print error "未找到插件列表"; ui_pause; return; fi
+    if [ ! -f "$PLUGIN_LIST_FILE" ]; then ui_print error "Plugin list not found"; ui_pause; return; fi
 
     while true; do
-        ui_header "插件仓库 (Repository)"
+        ui_header "Plugin Repository"
         MENU_ITEMS=()
         rm -f "$TAVX_DIR/.plugin_map"
         
@@ -62,41 +62,41 @@ list_install_menu() {
             echo "$ITEM|$line" >> "$TAVX_DIR/.plugin_map"
         done < "$PLUGIN_LIST_FILE"
         
-        MENU_ITEMS+=("🔙 返回上级")
-        CHOICE=$(ui_menu "输入关键词搜索" "${MENU_ITEMS[@]}")
-        if [[ "$CHOICE" == *"返回上级"* ]]; then return; fi
+        MENU_ITEMS+=("🔙 Back")
+        CHOICE=$(ui_menu "Search by keyword" "${MENU_ITEMS[@]}")
+        if [[ "$CHOICE" == *"Back"* ]]; then return; fi
         
         RAW_LINE=$(grep -F "$CHOICE|" "$TAVX_DIR/.plugin_map" | head -n 1 | cut -d'|' -f2-)
         if [ -n "$RAW_LINE" ]; then
             IFS='|' read -r n r s c d <<< "$RAW_LINE"
             install_single_plugin "$(echo "$n"|xargs)" "$(echo "$r"|xargs)" "$(echo "$s"|xargs)" "$(echo "$c"|xargs)" "$(echo "$d"|xargs)"
         else
-            ui_print error "数据解析错误"
+            ui_print error "Data parsing error"
             ui_pause
         fi
     done
 }
 
 submit_plugin() {
-    ui_header "提交新插件"
-    echo -e "${YELLOW}欢迎贡献插件！${NC}"
-    echo -e "${CYAN}提示: 必填项留空或输入 '0' 可取消操作。${NC}"
+    ui_header "Submit New Plugin"
+    echo -e "${YELLOW}Welcome to contribute plugins!${NC}"
+    echo -e "${CYAN}Tip: Leave required fields empty or enter '0' to cancel.${NC}"
     echo ""
-    local name=$(ui_input "1. 插件名称 (必填)" "" "false")
-    if [[ -z "$name" || "$name" == "0" ]]; then ui_print info "已取消"; ui_pause; return; fi
-    local url=$(ui_input "2. GitHub 地址 (必填)" "https://github.com/" "false")
-    if [[ -z "$url" || "$url" == "0" || "$url" == "https://github.com/" ]]; then ui_print info "已取消"; ui_pause; return; fi
-    if [[ "$url" != http* ]]; then ui_print error "地址格式错误"; ui_pause; return; fi
-    local dir=$(ui_input "3. 英文目录名 (选填，0取消)" "" "false")
-    if [[ "$dir" == "0" ]]; then ui_print info "已取消"; ui_pause; return; fi
+    local name=$(ui_input "1. Plugin Name (Required)" "" "false")
+    if [[ -z "$name" || "$name" == "0" ]]; then ui_print info "Cancelled"; ui_pause; return; fi
+    local url=$(ui_input "2. GitHub URL (Required)" "https://github.com/" "false")
+    if [[ -z "$url" || "$url" == "0" || "$url" == "https://github.com/" ]]; then ui_print info "Cancelled"; ui_pause; return; fi
+    if [[ "$url" != http* ]]; then ui_print error "URL format error"; ui_pause; return; fi
+    local dir=$(ui_input "3. Directory Name (Optional, 0 to cancel)" "" "false")
+    if [[ "$dir" == "0" ]]; then ui_print info "Cancelled"; ui_pause; return; fi
     
     echo -e "------------------------"
-    echo -e "名称: $name"
-    echo -e "地址: $url"
-    echo -e "目录: ${dir:-自动推断}"
+    echo -e "Name: $name"
+    echo -e "URL: $url"
+    echo -e "Directory: ${dir:-Auto-detect}"
     echo -e "------------------------"
     
-    if ! ui_confirm "确认提交吗？"; then ui_print info "已取消"; ui_pause; return; fi
+    if ! ui_confirm "Confirm submission?"; then ui_print info "Cancelled"; ui_pause; return; fi
     
     local JSON=$(printf '{"name":"%s", "url":"%s", "dirName":"%s"}' "$name" "$url" "$dir")
     
@@ -111,27 +111,27 @@ submit_plugin() {
         fi
     fi
     
-    if ui_spinner "正在提交..." "curl -s $proxy_args -X POST -H 'Content-Type: application/json' -d '$JSON' '$API_URL/submit' > $TAVX_DIR/.api_res"; then
+    if ui_spinner "Submitting..." "curl -s $proxy_args -X POST -H 'Content-Type: application/json' -d '$JSON' '$API_URL/submit' > $TAVX_DIR/.api_res"; then
         RES=$(cat "$TAVX_DIR/.api_res")
         if echo "$RES" | grep -q "success"; then
-            ui_print success "提交成功！请等待审核。"
+            ui_print success "Submission successful! Please wait for review."
         else
-            ui_print error "提交失败: $RES"
+            ui_print error "Submission failed: $RES"
         fi
     else
-        ui_print error "连接 API 失败，请检查网络。"
+        ui_print error "API connection failed, please check network."
     fi
     ui_pause
 }
 
 plugin_menu() {
     while true; do
-        ui_header "插件生态中心"
-        CHOICE=$(ui_menu "请选择" "📥 安装插件" "➕ 提交插件" "🔙 返回主菜单")
+        ui_header "Plugin Center"
+        CHOICE=$(ui_menu "Select option" "📥 Install Plugin" "➕ Submit Plugin" "🔙 Back to Main Menu")
         case "$CHOICE" in
-            *"安装"*) list_install_menu ;;
-            *"提交"*) submit_plugin ;;
-            *"返回"*) return ;;
+            *"Install"*) list_install_menu ;;
+            *"Submit"*) submit_plugin ;;
+            *"Back"*) return ;;
         esac
     done
 }

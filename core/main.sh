@@ -18,25 +18,24 @@ check_dependencies
 check_for_updates
 send_analytics
 
-# --- 动态模块加载器 ---
+# --- Dynamic Module Loader ---
 load_advanced_tools_menu() {
     local module_files=()
     local module_names=()
     local module_entries=()
     local menu_options=()
 
-    # 1. 扫描 modules 目录下的所有 .sh 文件
-    # 使用 nullglob 防止目录为空时报错
+    # 1. Scan all .sh files in modules directory
+    # Use nullglob to prevent errors when directory is empty
     shopt -s nullglob
     for file in "$TAVX_DIR/modules/"*.sh; do
-        # 检查文件是否包含元数据标记
+        # Check if file contains metadata marker
         if grep -q "\[METADATA\]" "$file"; then
-            # 提取 MODULE_NAME 和 MODULE_ENTRY
-            # 使用 grep 提取行，cut 分割，sed 去除前后空格
+            # Extract MODULE_NAME and MODULE_ENTRY
             local m_name=$(grep "MODULE_NAME:" "$file" | cut -d':' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
             local m_entry=$(grep "MODULE_ENTRY:" "$file" | cut -d':' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
-            # 只有当名称和入口都存在时才添加到菜单
+            # Only add to menu if both name and entry exist
             if [ -n "$m_name" ] && [ -n "$m_entry" ]; then
                 module_files+=("$file")
                 module_names+=("$m_name")
@@ -47,40 +46,40 @@ load_advanced_tools_menu() {
     done
     shopt -u nullglob
 
-    # 如果没有找到任何模块
+    # If no modules found
     if [ ${#menu_options[@]} -eq 0 ]; then
-        ui_print warn "未检测到有效的工具模块。"
-        echo -e "${YELLOW}请检查 modules/ 目录下脚本是否包含 [METADATA] 头部信息。${NC}"
+        ui_print warn "No valid tool modules detected."
+        echo -e "${YELLOW}Please check if scripts in modules/ contain [METADATA] header.${NC}"
         ui_pause
         return
     fi
 
-    menu_options+=("🔙 返回上级")
+    menu_options+=("🔙 Back")
 
-    # 2. 显示动态菜单
-    # 循环直到用户选择返回，实现子菜单常驻
+    # 2. Display dynamic menu
+    # Loop until user selects back
     while true; do
-        local choice=$(ui_menu "高级工具箱 (插件化)" "${menu_options[@]}")
+        local choice=$(ui_menu "Advanced Toolbox (Plugins)" "${menu_options[@]}")
 
-        if [[ "$choice" == *"返回上级"* ]]; then
+        if [[ "$choice" == *"Back"* ]]; then
             return
         fi
 
-        # 3. 匹配并执行
+        # 3. Match and execute
         local matched=false
         for i in "${!module_names[@]}"; do
             if [[ "${module_names[$i]}" == "$choice" ]]; then
                 local target_file="${module_files[$i]}"
                 local target_entry="${module_entries[$i]}"
                 
-                # 加载脚本环境
+                # Load script environment
                 source "$target_file"
                 
-                # 检查入口函数是否存在
+                # Check if entry function exists
                 if command -v "$target_entry" &> /dev/null; then
                     $target_entry
                 else
-                    ui_print error "模块错误：找不到入口函数 '$target_entry'"
+                    ui_print error "Module error: Entry function '$target_entry' not found"
                     ui_pause
                 fi
                 matched=true
@@ -88,9 +87,9 @@ load_advanced_tools_menu() {
             fi
         done
         
-        # 理论上不会运行到这里，但做个防守
+        # Shouldn't reach here, but defensive coding
         if [ "$matched" = false ]; then
-            ui_print error "无法加载该模块，请重试。"
+            ui_print error "Cannot load module, please try again."
             ui_pause
         fi
     done
@@ -107,72 +106,72 @@ while true; do
         S_AUDIO=1
     fi
 
-    NET_DL="自动优选"
+    NET_DL="Auto-Select"
     if [ -f "$NETWORK_CONFIG" ]; then
         CONF=$(cat "$NETWORK_CONFIG"); TYPE=${CONF%%|*}; VAL=${CONF#*|}
         [ ${#VAL} -gt 25 ] && VAL="...${VAL: -22}"
-        [ "$TYPE" == "PROXY" ] && NET_DL="本地代理 ($VAL)"
-        [ "$TYPE" == "MIRROR" ] && NET_DL="指定镜像 ($VAL)"
+        [ "$TYPE" == "PROXY" ] && NET_DL="Local Proxy ($VAL)"
+        [ "$TYPE" == "MIRROR" ] && NET_DL="Mirror ($VAL)"
     fi
 
-    NET_API="直连 (System)"
+    NET_API="Direct (System)"
     if [ -f "$CONFIG_FILE" ]; then
         if grep -A 4 "requestProxy:" "$CONFIG_FILE" | grep -q "enabled: true"; then
             URL=$(grep -A 4 "requestProxy:" "$CONFIG_FILE" | grep "url:" | awk '{print $2}' | tr -d '"')
-            [ -z "$URL" ] && URL="已开启"
-            NET_API="代理 ($URL)"
+            [ -z "$URL" ] && URL="Enabled"
+            NET_API="Proxy ($URL)"
         fi
     fi
 
     ui_header ""
     ui_dashboard "$S_ST" "$S_CF" "$S_ADB" "$NET_DL" "$NET_API" "$S_CLEWD" "$S_GEMINI" "$S_AUDIO"
 
-    OPT_UPD="🔄 安装与更新"
-    [ -f "$TAVX_DIR/.update_available" ] && OPT_UPD="🔄 安装与更新 🔔"
+    OPT_UPD="🔄 Install & Update"
+    [ -f "$TAVX_DIR/.update_available" ] && OPT_UPD="🔄 Install & Update 🔔"
 
-    CHOICE=$(ui_menu "功能导航" \
-        "🚀 启动服务" \
+    CHOICE=$(ui_menu "Main Menu" \
+        "🚀 Start Services" \
         "$OPT_UPD" \
-        "⚙️  系统设置" \
-        "🧩 插件管理" \
-        "🌐 网络设置" \
-        "💾 备份与恢复" \
-        "🛠️  高级工具" \
-        "💡 帮助与支持" \
-        "🚪 退出程序"
+        "⚙️  System Settings" \
+        "🧩 Plugin Manager" \
+        "🌐 Network Settings" \
+        "💾 Backup & Restore" \
+        "🛠️  Advanced Tools" \
+        "💡 Help & Support" \
+        "🚪 Exit"
     )
 
     case "$CHOICE" in
-        *"启动服务")
-            if [ ! -d "$INSTALL_DIR" ]; then ui_print warn "请先安装酒馆！"; ui_pause; else start_menu; fi ;;
-        *"安装与更新"*) update_center_menu ;;
-        *"系统设置") security_menu ;;
-        *"插件管理") plugin_menu ;;
-        *"网络设置") configure_download_network ;;
-        *"备份与恢复") backup_menu ;;
+        *"Start Services"*)
+            if [ ! -d "$INSTALL_DIR" ]; then ui_print warn "Please install SillyTavern first!"; ui_pause; else start_menu; fi ;;
+        *"Install & Update"*) update_center_menu ;;
+        *"System Settings") security_menu ;;
+        *"Plugin Manager") plugin_menu ;;
+        *"Network Settings") configure_download_network ;;
+        *"Backup & Restore") backup_menu ;;
         
-        # --- 改动：统一调用动态加载器 ---
-        *"高级工具") load_advanced_tools_menu ;;
+        # --- Changed: unified dynamic loader call ---
+        *"Advanced Tools") load_advanced_tools_menu ;;
         
-        *"帮助与支持"*) show_about_page ;;
+        *"Help & Support"*) show_about_page ;;
             
-        *"退出程序"*) 
-            EXIT_OPT=$(ui_menu "请选择退出方式" \
-                "🏃 保持后台运行" \
-                "🛑 结束所有服务并退出" \
-                "🔙 取消" \
+        *"Exit"*) 
+            EXIT_OPT=$(ui_menu "Select exit method" \
+                "🏃 Keep running in background" \
+                "🛑 Stop all services and exit" \
+                "🔙 Cancel" \
             )
             
             case "$EXIT_OPT" in
-                *"保持后台"*)
-                    ui_print info "程序已最小化，服务继续在后台运行。"
-                    ui_print info "下次输入 'st' 即可唤回菜单。"
+                *"Keep running"*)
+                    ui_print info "Program minimized, services continue running in background."
+                    ui_print info "Type 'st' next time to bring back the menu."
                     exit 0 
                     ;;
-                *"结束所有"*)
+                *"Stop all"*)
                     echo ""
-                    if ui_confirm "确定要关闭所有服务（酒馆、穿透、保活等）吗？"; then
-                        ui_spinner "正在停止所有进程..." "
+                    if ui_confirm "Are you sure you want to stop all services (Tavern, Tunnel, Keep-alive, etc.)?"; then
+                        ui_spinner "Stopping all processes..." "
                             if [ -f '$TAVX_DIR/.audio_heartbeat.pid' ]; then
                                 HB_PID=\$(cat '$TAVX_DIR/.audio_heartbeat.pid')
                                 kill -9 \$HB_PID >/dev/null 2>&1
@@ -189,10 +188,10 @@ while true; do
                             termux-wake-unlock 2>/dev/null
                             rm -f '$TAVX_DIR/.temp_link'
                         "
-                        ui_print success "所有服务已停止，资源已释放。"
+                        ui_print success "All services stopped, resources released."
                         exit 0
                     else
-                        ui_print info "操作已取消。"
+                        ui_print info "Operation cancelled."
                     fi
                     ;;
                 *) ;;

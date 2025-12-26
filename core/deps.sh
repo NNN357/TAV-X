@@ -17,36 +17,36 @@ check_dependencies() {
         return 0
     fi
 
-    ui_header "环境初始化"
-    echo -e "${BLUE}[INFO]${NC} 正在检查全套组件..."
+    ui_header "Environment Initialization"
+    echo -e "${BLUE}[INFO]${NC} Checking all components..."
 
     if ! command -v node &> /dev/null; then 
-        echo -e "${YELLOW}[WARN]${NC} 未找到 Node.js (核心引擎)"
+        echo -e "${YELLOW}[WARN]${NC} Node.js not found (Core Engine)"
         MISSING_PKGS="$MISSING_PKGS nodejs-lts"
     fi
 
     if ! command -v git &> /dev/null; then 
-        echo -e "${YELLOW}[WARN]${NC} 未找到 Git (版本控制)"
+        echo -e "${YELLOW}[WARN]${NC} Git not found (Version Control)"
         MISSING_PKGS="$MISSING_PKGS git"
     fi
     
     if ! command -v cloudflared &> /dev/null; then 
-        echo -e "${YELLOW}[WARN]${NC} 未找到 Cloudflared (内网穿透)"
+        echo -e "${YELLOW}[WARN]${NC} Cloudflared not found (Tunnel)"
         MISSING_PKGS="$MISSING_PKGS cloudflared"
     fi
 
     if ! command -v gum &> /dev/null; then
-        echo -e "${YELLOW}[WARN]${NC} 未找到 Gum (UI 界面)"
+        echo -e "${YELLOW}[WARN]${NC} Gum not found (UI Engine)"
         MISSING_PKGS="$MISSING_PKGS gum"
     fi
 
     if ! command -v tar &> /dev/null; then
-        echo -e "${YELLOW}[WARN]${NC} 未找到 Tar (备份工具)"
+        echo -e "${YELLOW}[WARN]${NC} Tar not found (Backup Tool)"
         MISSING_PKGS="$MISSING_PKGS tar"
     fi
 
     if [ -n "$MISSING_PKGS" ]; then
-        echo -e "${BLUE}[INFO]${NC} 检测到缺失组件，正在自动补全: $MISSING_PKGS"
+        echo -e "${BLUE}[INFO]${NC} Missing components detected, auto-installing: $MISSING_PKGS"
         
         pkg update -y
         pkg install $MISSING_PKGS -y
@@ -57,16 +57,16 @@ check_dependencies() {
            command -v gum &> /dev/null && \
            command -v tar &> /dev/null; then
             
-            echo -e "${GREEN}[DONE]${NC} 环境全量修复完成！"
+            echo -e "${GREEN}[DONE]${NC} Environment fully repaired!"
             export DEPS_CHECKED="true"
-            read -n 1 -s -r -p "按任意键继续..."
+            read -n 1 -s -r -p "Press any key to continue..."
         else
-            echo -e "${RED}[ERROR]${NC} 环境修复不完整！部分组件安装失败。"
-            echo -e "${YELLOW}请尝试切换网络或手动运行: pkg install $MISSING_PKGS${NC}"
+            echo -e "${RED}[ERROR]${NC} Environment repair incomplete! Some components failed to install."
+            echo -e "${YELLOW}Try switching networks or run manually: pkg install $MISSING_PKGS${NC}"
             exit 1
         fi
     else
-        echo -e "${GREEN}[DONE]${NC} 环境完整。"
+        echo -e "${GREEN}[DONE]${NC} Environment complete."
         export DEPS_CHECKED="true"
     fi
 }

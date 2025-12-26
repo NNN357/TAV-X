@@ -39,7 +39,7 @@ get_smart_proxy_url() {
 }
 
 apply_recommended_settings() {
-    ui_print info "正在应用推荐配置..."
+    ui_print info "Applying recommended settings..."
     
     local BATCH_JSON='{
         "listen": true,
@@ -56,17 +56,17 @@ apply_recommended_settings() {
     }'
     
     if config_set_batch "$BATCH_JSON"; then
-        ui_print success "推荐配置已应用！"
+        ui_print success "Recommended settings applied!"
     else
-        ui_print error "配置应用失败，请检查日志。"
+        ui_print error "Failed to apply settings, please check logs."
     fi
     sleep 1
 }
 
 check_install_integrity() {
     if [ ! -d "$INSTALL_DIR" ] || [ ! -f "$INSTALL_DIR/server.js" ]; then
-        ui_print error "未检测到酒馆核心文件。"
-        if ui_confirm "是否立即运行安装修复？"; then 
+        ui_print error "SillyTavern core files not detected."
+        if ui_confirm "Run installation repair now?"; then 
             install_sillytavern
             return 0
         else return 1; fi
@@ -82,11 +82,11 @@ stop_services() {
     
     local wait_count=0
     while pgrep -f "node server.js" > /dev/null; do
-        if [ "$wait_count" -eq 0 ]; then ui_print info "正在停止旧进程..."; fi
+        if [ "$wait_count" -eq 0 ]; then ui_print info "Stopping old processes..."; fi
         sleep 0.5
         ((wait_count++))
         if [ "$wait_count" -ge 10 ]; then 
-            ui_print warn "进程响应超时，执行强制清理..."
+            ui_print warn "Process not responding, force killing..."
             pkill -9 -f "node server.js"
         fi
         if [ "$wait_count" -ge 20 ]; then break; fi
@@ -99,7 +99,7 @@ start_node_server() {
     cd "$INSTALL_DIR" || return 1
     termux-wake-lock
     rm -f "$SERVER_LOG"
-    ui_spinner "正在启动酒馆服务..." "setsid nohup node $MEM_ARGS server.js > '$SERVER_LOG' 2>&1 & sleep 2"
+    ui_spinner "Starting SillyTavern service..." "setsid nohup node $MEM_ARGS server.js > '$SERVER_LOG' 2>&1 & sleep 2"
 }
 
 detect_protocol_logic() {
@@ -129,23 +129,23 @@ start_fixed_tunnel() {
     local CF_CMD="tunnel run --token $CF_TOKEN"
     
     if [ -n "$PROXY_URL" ]; then
-        ui_print info "代理已注入: $PROXY_URL"
+        ui_print info "Proxy injected: $PROXY_URL"
         setsid env TUNNEL_HTTP_PROXY="$PROXY_URL" nohup cloudflared $CF_CMD --protocol http2 > "$CF_LOG" 2>&1 &
     else
         setsid nohup cloudflared $CF_CMD > "$CF_LOG" 2>&1 &
     fi
     
-    ui_print success "服务已启动！"
+    ui_print success "Service started!"
     echo ""
-    echo -e "${GREEN}请访问您在 Cloudflare 后台绑定的域名。${NC}"
-    echo -e "${GRAY}(固定隧道无需获取临时链接)${NC}"
+    echo -e "${GREEN}Please visit the domain you bound in Cloudflare dashboard.${NC}"
+    echo -e "${GRAY}(Fixed tunnel doesn't need temporary link)${NC}"
 }
 
 start_temp_tunnel() {
     local PORT=$1; local PROXY_URL=$2
     local PROTOCOL="http2"
     if [ -n "$PROXY_URL" ]; then
-        ui_print info "检测到代理，强制使用 HTTP2..."
+        ui_print info "Proxy detected, forcing HTTP2..."
     else
         PROTOCOL=$(detect_protocol_logic "")
     fi
@@ -153,7 +153,7 @@ start_temp_tunnel() {
     local CF_ARGS=(tunnel --protocol "$PROTOCOL" --url "http://127.0.0.1:$PORT" --no-autoupdate)
     
     if [ -n "$PROXY_URL" ]; then
-        ui_print info "隧道已接入代理网关: $PROXY_URL"
+        ui_print info "Tunnel connected via proxy: $PROXY_URL"
         setsid env TUNNEL_HTTP_PROXY="$PROXY_URL" nohup cloudflared "${CF_ARGS[@]}" > "$CF_LOG" 2>&1 &
     else
         setsid nohup cloudflared "${CF_ARGS[@]}" > "$CF_LOG" 2>&1 &
@@ -162,16 +162,16 @@ start_temp_tunnel() {
     rm -f "$TAVX_DIR/.temp_link"
     local wait_cmd="source \"$TAVX_DIR/core/launcher.sh\"; link=\$(wait_for_link_logic); if [ -n \"\$link\" ]; then echo \"\$link\" > \"$TAVX_DIR/.temp_link\"; exit 0; else exit 1; fi"
     
-    if ui_spinner "建立隧道 ($PROTOCOL)..." "$wait_cmd"; then
+    if ui_spinner "Establishing tunnel ($PROTOCOL)..." "$wait_cmd"; then
         local LINK=$(cat "$TAVX_DIR/.temp_link")
-        ui_print success "链接创建成功！"
+        ui_print success "Link created successfully!"
         echo ""
         echo -e "${YELLOW}👉 $LINK${NC}"
         echo ""
-        echo -e "${CYAN}(长按复制)${NC}"
+        echo -e "${CYAN}(Long press to copy)${NC}"
     else 
-        ui_print error "链接获取超时。"
-        ui_print warn "提示: 若一直超时，请尝试开启/关闭 VPN 后重试。"
+        ui_print error "Link retrieval timed out."
+        ui_print warn "Tip: If it keeps timing out, try toggling VPN on/off and retry."
     fi
 }
 
@@ -187,30 +187,30 @@ start_menu() {
         local status_txt=""
         if pgrep -f "cloudflared" >/dev/null; then 
             if grep -q "protocol=quic" "$CF_LOG" 2>/dev/null; then P="QUIC"; else P="HTTP2"; fi
-            status_txt="${GREEN}● 穿透运行中 ($P)${NC}"
+            status_txt="${GREEN}● Tunnel Running ($P)${NC}"
         elif pgrep -f "node server.js" >/dev/null; then 
-            status_txt="${GREEN}● 本地运行中${NC}"
-        else status_txt="${RED}● 已停止${NC}"; fi
+            status_txt="${GREEN}● Running Locally${NC}"
+        else status_txt="${RED}● Stopped${NC}"; fi
         
-        [ -n "$PROXY_URL" ] && status_txt="$status_txt ${CYAN}[代理活跃]${NC}"
+        [ -n "$PROXY_URL" ] && status_txt="$status_txt ${CYAN}[Proxy Active]${NC}"
         local MEM_SHOW=""
         if [ -n "$MEM_ARGS" ]; then MEM_SHOW=" | 🧠 $(echo $MEM_ARGS | cut -d'=' -f2)MB"; fi
 
-        ui_header "启动中心 (Port: $PORT$MEM_SHOW)"
-        echo -e "状态: $status_txt"
+        ui_header "Launch Center (Port: $PORT$MEM_SHOW)"
+        echo -e "Status: $status_txt"
         echo ""
 
-        CHOICE=$(ui_menu "请选择操作" "🏠 启动本地模式" "🌍 启动远程穿透" "🔍 获取远程链接" "⚡ 一键应用推荐配置" "📜 监控运行日志" "🛑 停止所有服务" "🔙 返回主菜单")
+        CHOICE=$(ui_menu "Select action" "🏠 Start Local Mode" "🌍 Start Remote Tunnel" "🔍 Get Remote Link" "⚡ Apply Recommended Settings" "📜 Monitor Logs" "🛑 Stop All Services" "🔙 Back to Main Menu")
 
         case "$CHOICE" in
-            *"本地模式"*) 
+            *"Local Mode"*) 
                 stop_services
                 start_node_server
                 local PORT=$(get_active_port)
-                ui_print success "本地启动: http://127.0.0.1:$PORT"
+                ui_print success "Local started: http://127.0.0.1:$PORT"
                 ui_pause ;;
                 
-            *"远程穿透"*) 
+            *"Remote Tunnel"*) 
                 stop_services
                 start_node_server
                 rm -f "$CF_LOG"
@@ -218,38 +218,38 @@ start_menu() {
                 local TOKEN_FILE="$TAVX_DIR/config/cf_token"
                 local CF_TOKEN=""; [ -f "$TOKEN_FILE" ] && [ -s "$TOKEN_FILE" ] && CF_TOKEN=$(cat "$TOKEN_FILE")
                 if [ -n "$CF_TOKEN" ]; then
-                    ui_print info "检测到 Token，启动固定隧道..."
+                    ui_print info "Token detected, starting fixed tunnel..."
                     start_fixed_tunnel "$PORT" "$PROXY_URL" "$CF_TOKEN"
                 else
                     start_temp_tunnel "$PORT" "$PROXY_URL"
                 fi
                 ui_pause ;;
             
-            *"推荐配置"*) apply_recommended_settings ;;
+            *"Recommended Settings"*) apply_recommended_settings ;;
             
-            *"远程链接"*)
+            *"Remote Link"*)
                 local TOKEN_FILE="$TAVX_DIR/config/cf_token"
                 if [ -f "$TOKEN_FILE" ] && [ -s "$TOKEN_FILE" ]; then
-                    ui_print info "当前为固定隧道模式"
-                    echo -e "${GREEN}请访问您在 Cloudflare 后台绑定的域名。${NC}"
+                    ui_print info "Currently in fixed tunnel mode"
+                    echo -e "${GREEN}Please visit the domain you bound in Cloudflare dashboard.${NC}"
                 else
                     local LINK=$(wait_for_link_logic)
                     if [ -n "$LINK" ]; then 
-                        ui_print success "当前链接:"
+                        ui_print success "Current link:"
                         echo -e "\n${YELLOW}$LINK${NC}\n"
-                        echo -e "${CYAN}(长按复制)${NC}"
+                        echo -e "${CYAN}(Long press to copy)${NC}"
                     else 
-                        ui_print warn "无法获取链接 (服务未启动或网络超时)"
+                        ui_print warn "Cannot get link (service not started or network timeout)"
                     fi
                 fi
                 ui_pause ;;
                 
-            *"日志"*) 
-                SUB=$(ui_menu "选择日志" "📜 酒馆日志" "🚇 隧道日志" "🔙 返回")
-                case "$SUB" in *"酒馆"*) safe_log_monitor "$SERVER_LOG" ;; *"隧道"*) safe_log_monitor "$CF_LOG" ;; esac ;;
+            *"Logs"*) 
+                SUB=$(ui_menu "Select log" "📜 Tavern Log" "🚇 Tunnel Log" "🔙 Back")
+                case "$SUB" in *"Tavern"*) safe_log_monitor "$SERVER_LOG" ;; *"Tunnel"*) safe_log_monitor "$CF_LOG" ;; esac ;;
                 
-            *"停止"*) stop_services; ui_pause ;;
-            *"返回"*) return ;;
+            *"Stop"*) stop_services; ui_pause ;;
+            *"Back"*) return ;;
         esac
     done
 }

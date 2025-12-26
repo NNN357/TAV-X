@@ -19,18 +19,18 @@ check_for_updates() {
 }
 
 update_sillytavern() {
-    ui_header "SillyTavern 智能更新"
+    ui_header "SillyTavern Smart Update"
     
     if [ ! -d "$INSTALL_DIR/.git" ]; then
-        ui_print error "未检测到有效的 Git 仓库。"
+        ui_print error "No valid Git repository detected."
         ui_pause; return
     fi
 
     cd "$INSTALL_DIR" || return
     if ! git symbolic-ref -q HEAD >/dev/null; then
         local current_tag=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
-        ui_print warn "当前处于版本锁定状态 ($current_tag)"
-        echo -e "${YELLOW}请先 [解除锁定] 后再尝试更新。${NC}"
+        ui_print warn "Currently in version-locked state ($current_tag)"
+        echo -e "${YELLOW}Please [Unlock] first before updating.${NC}"
         ui_pause; return
     fi
 
@@ -38,102 +38,102 @@ update_sillytavern() {
 
     local UPDATE_CMD="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$INSTALL_DIR\" \"SillyTavern/SillyTavern\"; cd \"$INSTALL_DIR\"; git pull --autostash"
     
-    if ui_spinner "正在同步最新代码..." "$UPDATE_CMD"; then
-        ui_print success "代码同步完成。"
+    if ui_spinner "Syncing latest code..." "$UPDATE_CMD"; then
+        ui_print success "Code sync complete."
         echo ""
         if npm_install_smart "$INSTALL_DIR"; then
-            ui_print success "依赖更新完成！"
+            ui_print success "Dependencies updated!"
         else
-            ui_print warn "依赖更新遇到问题。"
+            ui_print warn "Dependency update encountered issues."
         fi
     else
-        ui_print error "更新失败！可能存在冲突或网络问题。"
+        ui_print error "Update failed! Possible conflicts or network issues."
     fi
     ui_pause
 }
 
 rollback_sillytavern() {
     while true; do
-        ui_header "版本时光机"
+        ui_header "Version Time Machine"
         cd "$INSTALL_DIR" || return
         
         local CURRENT_DESC=""
         local IS_DETACHED=false
         if git symbolic-ref -q HEAD >/dev/null; then
             local branch=$(git rev-parse --abbrev-ref HEAD)
-            CURRENT_DESC="${GREEN}分支: $branch (最新)${NC}"
+            CURRENT_DESC="${GREEN}Branch: $branch (Latest)${NC}"
         else
             IS_DETACHED=true
             local tag=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
-            CURRENT_DESC="${YELLOW}🔒 已锁定: $tag${NC}"
+            CURRENT_DESC="${YELLOW}🔒 Locked: $tag${NC}"
         fi
         
         local TAG_CACHE="$TAVX_DIR/.tag_cache"
         local CACHE_STATUS=""
         if [ -f "$TAG_CACHE" ]; then CACHE_STATUS="(Cached)"; fi
         
-        echo -e "当前状态: $CURRENT_DESC"
+        echo -e "Current status: $CURRENT_DESC"
         echo "----------------------------------------"
         
         local MENU_ITEMS=()
-        [ "$IS_DETACHED" = true ] && MENU_ITEMS+=("🔓 解除锁定 (恢复最新版)")
-        MENU_ITEMS+=("⏳ 回退至历史版本 $CACHE_STATUS")
-        MENU_ITEMS+=("🔄 强制刷新版本列表")
-        MENU_ITEMS+=("🔀 切换通道: Release")
-        MENU_ITEMS+=("🔀 切换通道: Staging")
-        MENU_ITEMS+=("🔙 返回")
+        [ "$IS_DETACHED" = true ] && MENU_ITEMS+=("🔓 Unlock (Restore to Latest)")
+        MENU_ITEMS+=("⏳ Rollback to Historical Version $CACHE_STATUS")
+        MENU_ITEMS+=("🔄 Force Refresh Version List")
+        MENU_ITEMS+=("🔀 Switch Channel: Release")
+        MENU_ITEMS+=("🔀 Switch Channel: Staging")
+        MENU_ITEMS+=("🔙 Back")
         
-        CHOICE=$(ui_menu "请选择操作" "${MENU_ITEMS[@]}")
+        CHOICE=$(ui_menu "Select action" "${MENU_ITEMS[@]}")
         
         case "$CHOICE" in
-            *"解除锁定"*)
-                if ui_confirm "确定恢复到最新 Release 版？"; then
+            *"Unlock"*)
+                if ui_confirm "Confirm restore to latest Release version?"; then
                     prepare_network_strategy "SillyTavern/SillyTavern"
                     local RESTORE="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$INSTALL_DIR\" \"SillyTavern/SillyTavern\"; git config remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\"; git fetch origin release --depth=1; git reset --hard origin/release; git checkout release"
-                    if ui_spinner "正在归队..." "$RESTORE"; then
+                    if ui_spinner "Restoring..." "$RESTORE"; then
                         echo ""; npm_install_smart "$INSTALL_DIR"
-                        ui_print success "已恢复！"
-                    else ui_print error "恢复失败"; fi
+                        ui_print success "Restored!"
+                    else ui_print error "Restore failed"; fi
                 fi
                 ui_pause ;;
-            *"强制刷新"*)
+            *"Force Refresh"*)
                 rm -f "$TAG_CACHE"
-                ui_print info "缓存已清除。"
+                ui_print info "Cache cleared."
                 sleep 0.5 ;;
-            *"回退至历史版本"*)
+            *"Rollback to Historical"*)
                 prepare_network_strategy "SillyTavern/SillyTavern"
                 if [ ! -f "$TAG_CACHE" ]; then
                     local FETCH="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$INSTALL_DIR\" \"SillyTavern/SillyTavern\"; git fetch --tags"
-                    if ! ui_spinner "云端获取中..." "$FETCH"; then
-                        ui_print error "获取失败"; ui_pause; continue
+                    if ! ui_spinner "Fetching from cloud..." "$FETCH"; then
+                        ui_print error "Fetch failed"; ui_pause; continue
                     fi
                     git tag --sort=-v:refname | head -n 10 > "$TAG_CACHE"
                 fi
                 mapfile -t TAG_LIST < "$TAG_CACHE"
-                if [ ${#TAG_LIST[@]} -eq 0 ]; then ui_print warn "列表为空"; rm -f "$TAG_CACHE"; ui_pause; continue; fi
-                TAG_LIST+=("🔙 取消")
-                TAG_CHOICE=$(ui_menu "选择版本" "${TAG_LIST[@]}")
-                if [[ "$TAG_CHOICE" != *"取消"* ]]; then
-                    echo -e "${RED}警告：即将重置核心文件以解决冲突。${NC}"
-                    if ui_confirm "确认回退到 $TAG_CHOICE ？"; then
+                if [ ${#TAG_LIST[@]} -eq 0 ]; then ui_print warn "List is empty"; rm -f "$TAG_CACHE"; ui_pause; continue; fi
+                TAG_LIST+=("🔙 Cancel")
+                TAG_CHOICE=$(ui_menu "Select version" "${TAG_LIST[@]}")
+                if [[ "$TAG_CHOICE" != *"Cancel"* ]]; then
+                    echo -e "${RED}Warning: Core files will be reset to resolve conflicts.${NC}"
+                    if ui_confirm "Confirm rollback to $TAG_CHOICE?"; then
                         local ROLLBACK_CMD="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$INSTALL_DIR\" \"SillyTavern/SillyTavern\"; git fetch origin tag \"$TAG_CHOICE\" --depth=1; git reset --hard; git checkout \"$TAG_CHOICE\""
-                        if ui_spinner "时光倒流..." "$ROLLBACK_CMD"; then
+                        if ui_spinner "Time traveling..." "$ROLLBACK_CMD"; then
                             echo ""; npm_install_smart "$INSTALL_DIR"
-                            ui_print success "已锁定在 $TAG_CHOICE"
-                        else ui_print error "切换失败"; fi
+                            ui_print success "Locked at $TAG_CHOICE"
+                        else ui_print error "Switch failed"; fi
                     fi
                 fi
                 ui_pause ;;
-            *"切换通道"*)
+            *"Switch Channel"*)
                 local TARGET=""; [[ "$CHOICE" == *"Release"* ]] && TARGET="release"; [[ "$CHOICE" == *"Staging"* ]] && TARGET="staging"
                 prepare_network_strategy "SillyTavern/SillyTavern"
                 local SW_CMD="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$INSTALL_DIR\" \"SillyTavern/SillyTavern\"; git config remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\"; git fetch origin $TARGET --depth=1; git reset --hard origin/$TARGET; git checkout $TARGET"
-                if ui_spinner "切换至 $TARGET..." "$SW_CMD"; then
+                if ui_spinner "Switching to $TARGET..." "$SW_CMD"; then
                     echo ""; npm_install_smart "$INSTALL_DIR"
-                    ui_print success "切换成功！"
-                else ui_print error "切换失败"; fi
+                    ui_print success "Switch successful!"
+                else ui_print error "Switch failed"; fi
                 ui_pause ;;
-            *"返回"*) return ;;
+            *"Back"*) return ;;
         esac
     done
 }
@@ -141,18 +141,18 @@ rollback_sillytavern() {
 perform_self_update() {
     prepare_network_strategy "Future-404/TAV-X.git"
     local UPD_CMD="source \"$TAVX_DIR/core/utils.sh\"; fix_git_remote \"$TAVX_DIR\" \"Future-404/TAV-X.git\"; cd \"$TAVX_DIR\"; CURr=\$(git rev-parse --abbrev-ref HEAD); git fetch --all && git reset --hard origin/\$CURr"
-    if ui_spinner "更新脚本..." "$UPD_CMD"; then
+    if ui_spinner "Updating script..." "$UPD_CMD"; then
         rm -f "$TAVX_DIR/.update_available"; chmod +x st.sh core/*.sh modules/*.sh scripts/*.js 2>/dev/null
-        ui_print success "完成！重启中..."; sleep 1; exec bash "$TAVX_DIR/st.sh"
-    else ui_print error "失败"; ui_pause; fi
+        ui_print success "Done! Restarting..."; sleep 1; exec bash "$TAVX_DIR/st.sh"
+    else ui_print error "Failed"; ui_pause; fi
 }
 
 update_center_menu() {
     while true; do
-        ui_header "安装与更新管理"
+        ui_header "Install & Update Center"
         cd "$TAVX_DIR" || return
         TAV_VER_DISP="${CURRENT_VERSION:-Unknown} ($(git rev-parse --short HEAD))"
-        ST_VER_DISP="未安装"; local st_installed=false
+        ST_VER_DISP="Not Installed"; local st_installed=false
         if [ -d "$INSTALL_DIR/.git" ]; then
             cd "$INSTALL_DIR"
             if ! git symbolic-ref -q HEAD >/dev/null; then
@@ -163,21 +163,21 @@ update_center_menu() {
             st_installed=true
         fi
         
-        echo "脚本: $TAV_VER_DISP"; echo -e "酒馆: $ST_VER_DISP"; echo "----------------------------------------"
-        [ -f "$TAVX_DIR/.update_available" ] && ui_print warn "🔔 脚本有新版本可用！"
+        echo "Script: $TAV_VER_DISP"; echo -e "Tavern: $ST_VER_DISP"; echo "----------------------------------------"
+        [ -f "$TAVX_DIR/.update_available" ] && ui_print warn "🔔 New script version available!"
         
         MENU_ITEMS=()
-        [ "$st_installed" = true ] && MENU_ITEMS+=("🍷 更新 SillyTavern") && MENU_ITEMS+=("🔙 版本回退/切换") || MENU_ITEMS+=("📥 安装 SillyTavern")
-        MENU_ITEMS+=("📜 更新 TAV-X 脚本")
-        MENU_ITEMS+=("🔙 返回主菜单")
+        [ "$st_installed" = true ] && MENU_ITEMS+=("🍷 Update SillyTavern") && MENU_ITEMS+=("🔙 Version Rollback/Switch") || MENU_ITEMS+=("📥 Install SillyTavern")
+        MENU_ITEMS+=("📜 Update TAV-X Script")
+        MENU_ITEMS+=("🔙 Back to Main Menu")
         
-        CHOICE=$(ui_menu "请选择操作" "${MENU_ITEMS[@]}")
+        CHOICE=$(ui_menu "Select action" "${MENU_ITEMS[@]}")
         case "$CHOICE" in
-            *"更新 SillyTavern"*) update_sillytavern ;;
-            *"安装 SillyTavern"*) install_sillytavern ;;
-            *"版本回退"*) rollback_sillytavern ;;
-            *"更新 TAV-X"*) perform_self_update ;;
-            *"返回"*) return ;;
+            *"Update SillyTavern"*) update_sillytavern ;;
+            *"Install SillyTavern"*) install_sillytavern ;;
+            *"Version Rollback"*) rollback_sillytavern ;;
+            *"Update TAV-X"*) perform_self_update ;;
+            *"Back"*) return ;;
         esac
     done
 }

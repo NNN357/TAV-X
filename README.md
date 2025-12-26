@@ -1,244 +1,181 @@
-# TAV-X：Termux 自动化安装脚本
-### ✨ 新增功能 
-*   **🛡️ ADB 系统级保活模块**：
-    *   基于 `android-tools` 的无线调试方案，无需 Root 权限。
-    *   **一键解除 Android 12/13/14 的 32 个子进程限制**（解决酒馆突然断连的元凶）。
-    *   自动申请 **WakeLock (CPU 唤醒锁)**，防止手机锁屏后 TAV 停止运行。
-    *   一键将 Termux 加入电池白名单、授予后台运行权限。
-    *   支持 MIUI/ColorOS/OriginOS 等厂商的特殊优化策略。
-*   **🧩 动态模块加载器**：
-    *   主脚本更加轻量化。点击功能时才从云端拉取最新模块，确保存储空间不浪费，功能永远最新。
+# TAV-X 🌐
 
-### 🛠️ 修复与优化 
-*   **🐛 修复镜像死循环**：修复了在插件安装时，镜像前缀被重复拼接导致下载失败的严重 Bug。
-*   **🎨 UI 视觉升级**：全新的渐变色 Banner，更现代的配色方案，提升交互体验。
-*   **⚡ 下载逻辑重构**：更新脚本和下载模块时，现在会完美遵循用户设置的镜像源或代理。
-*   **🗑️ 日志清理**：修复了停止服务后，菜单仍显示旧 Cloudflare 链接的逻辑漏洞。
+**One-click deployment script to turn your Android phone into a personal AI server**
+
+[![GitHub Stars](https://img.shields.io/github/stars/Future-404/TAV-X?style=social)](https://github.com/Future-404/TAV-X/stargazers)
+[![GitHub License](https://img.shields.io/github/license/Future-404/TAV-X)](https://github.com/Future-404/TAV-X/blob/main/LICENSE)
 
 ---
 
-# **📱 让闲置安卓机变身“私人云端酒馆”：TAV-X 一键部署方案**
+## 📖 Introduction
 
-你还在为想随时随地玩 SillyTavern（酒馆）而发愁吗？ 手里有闲置的旧安卓手机在“吃灰”？想用主力 iPhone 畅聊却苦于系统限制？
+TAV-X is a smart installer and management script for deploying [SillyTavern](https://github.com/SillyTavern/SillyTavern) on Android devices via [Termux](https://termux.dev/). It automates environment setup, dependency management, network tunneling, and background process optimization.
 
-**TAV-X (Termux Automated Venture-X)** 来了！这就是你一直在寻找的终极解决方案。
+### ✨ Key Features
 
-无需复杂的 Linux 知识，无需繁琐的网络配置，只需要一条命令，瞬间将你的安卓手机变成一台 24 小时在线的 AI 专属服务器！
-
----
-
-
-
-## 🌟 为什么选择 TAV-X？
-
-*   **♻️ 变废为宝，旧机新生**
-    不要让旧手机躺在抽屉里贬值！只要能运行 Termux，它就是你最棒的随身服务器。 部署在旧安卓，享受在新手机。甚至可以用平板、电脑、电视浏览器访问，榨干旧设备的每一滴性能！
-
-*   **🍎 安卓部署，苹果畅玩**
-    iOS 用户狂喜！你不需要在 iPhone 上折腾复杂的环境。 将 TAV-X 部署在安卓备用机上，通过生成的专属链接，你的 iPhone/iPad 甚至 PC/Mac 都能通过浏览器无缝接入，体验丝滑的原生酒馆。
-
-*   **🚀 全程“无痛”，告别魔法**
-    受够了为了连接还要开关梯子？ TAV-X 内置 Cloudflare 隧道技术，无需魔法，无需公网 IP。无论你在家里、公司、还是在移动数据网络下，都能随时随地打开链接直达你的酒馆。
-
-*   **🔒 数据私有，安全无忧**
-    所有聊天记录、角色卡片、世界书依然存储在你本地的安卓设备上，数据掌握在自己手中。不用担心云端服务商偷看你的隐私。
-
-*   **👥 成为“馆主”，多人协作**
-    脚本默认开启多用户模式！ 你可以作为管理员（Admin）掌控全局，同时创建一个普通账户分享给朋友、或者作为自己的“纯净小号”使用。通过一个链接，实现多人同时在线畅聊。
+- **One-Click Installation**: Automated SillyTavern deployment with smart mirror selection
+- **Cloudflare Tunnel**: Built-in remote access via Cloudflare's free tunneling service
+- **ADB Keep-Alive**: Advanced background process protection to prevent Android from killing services
+- **Plugin Ecosystem**: Easy installation of community extensions and plugins
+- **Multi-Proxy Support**: AI proxy modules including ClewdR, Gemini CLI, AIStudio, and AutoGLM
+- **Backup & Restore**: Simple data backup and restoration to external storage
+- **Version Management**: Update, rollback, and switch between release/staging channels
+- **Beautiful UI**: Rich terminal interface powered by [Gum](https://github.com/charmbracelet/gum)
 
 ---
 
-## 🚀 项目简介
+## 🚀 Quick Start
 
-TAV-X 是一个为安卓 Termux 环境量身定制的傻瓜式一键安装脚本，旨在简化 SillyTavern 的部署和管理流程。它集成了环境配置、依赖安装、隧道穿透和后台保活功能。
+### Prerequisites
 
-### ✨ 项目核心亮点
+1. **Android Device** with Termux installed
+   - [Download Termux from F-Droid](https://f-droid.org/packages/com.termux/) (recommended)
+   - Do NOT use the Play Store version (outdated)
 
-| 特性 | 描述 |
-| :--- | :--- |
-| **一键式部署** | 一条命令完成环境依赖安装、项目克隆和配置初始化。 |
-| **智能快捷指令** | 自动配置 `st` 命令，配置完成后，下次只需输入 `st` 即可直接唤起菜单。 |
-| **TUI 交互式管理** | 提供直观的文本用户界面（TUI）菜单，集成服务状态和实时远程链接显示。 |
-| **后台稳定运行** | 使用 `setsid nohup` 启动，并启用 `termux-wake-lock` 锁，确保服务在 Termux 后台和屏幕熄灭时保持稳定不断线。 |
-| **跨设备分享** | 利用 Cloudflare 隧道技术（无需额外配置），生成安全链接，实现从任何设备远程访问。 |
-| **无损更新** | 自动暂存本地修改，确保核心项目更新后本地文件和数据不受影响。 |
+2. **Storage Permission** (for backups)
+   ```bash
+   termux-setup-storage
+   ```
 
----
+### Installation
 
-## ⚡ 快速开始
+Run this single command in Termux:
 
-### 准备工作
-请确保您已安装并打开了安卓 Termux 终端应用。
-
-### 📥 安装与启动命令
-
-请根据您的网络环境，选择下面其中一条命令复制到 Termux 中执行。
-
-#### 🌏 通用/国际线路 (Global)
-如果您在非中国大陆地区，或网络环境允许访问 GitHub：
 ```bash
-curl -s -L https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
+curl -fsSL https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh | bash
 ```
 
-#### 🚀 国内加速线路 (China Mainland)
-如果遇到网络连接问题，请任选以下一条加速命令执行：
+Or if you prefer wget:
 
-**线路 1 (EdgeOne):**
 ```bash
-curl -s -L https://edgeone.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
+wget -qO- https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh | bash
 ```
 
-**线路 2 (HK):**
+### Usage
+
+After installation, type `st` in Termux to launch the menu:
+
 ```bash
-curl -s -L https://hk.gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
+st
 ```
 
-**线路 3 (Generic):**
-```bash
-curl -s -L https://gh-proxy.com/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
+---
+
+## 📱 Main Menu
+
+| Option | Description |
+|--------|-------------|
+| 🚀 Start Services | Launch SillyTavern locally or with remote tunnel |
+| 🔄 Install & Update | Install SillyTavern, update, or rollback versions |
+| ⚙️ System Settings | Configure server parameters, memory, ports, etc. |
+| 🧩 Plugin Manager | Install community plugins and extensions |
+| 🌐 Network Settings | Configure download proxies and mirrors |
+| 💾 Backup & Restore | Backup/restore data to external storage |
+| 🛠️ Advanced Tools | ADB keep-alive, ClewdR, Gemini proxy, etc. |
+| 💡 Help & Support | About page and contact information |
+
+---
+
+## 🛡️ ADB Keep-Alive
+
+Android aggressively kills background processes. TAV-X includes an ADB-based keep-alive system:
+
+1. **Wireless ADB Pairing**: Connect ADB wirelessly without a PC
+2. **Universal Keep-Alive**: Safe optimizations for all Android versions
+3. **Aggressive Keep-Alive**: Vendor-specific optimizations (Huawei, Xiaomi, OPPO, Vivo)
+4. **Audio Heartbeat**: Optional audio-based process elevation
+
+---
+
+## 🔌 AI Proxy Modules
+
+TAV-X includes several AI proxy modules in the Advanced Tools menu:
+
+| Module | Description |
+|--------|-------------|
+| 🦀 ClewdR | Claude API reverse proxy |
+| ♊ Gemini CLI | Google Gemini API proxy with OAuth |
+| 🏗️ AIStudio | Baidu AIStudio proxy plugin |
+| 🤖 AutoGLM | GLM phone agent automation |
+
+---
+
+## 📂 Directory Structure
+
+```
+~/.tav_x/
+├── st.sh              # Main entry point
+├── core/              # Core scripts
+│   ├── main.sh        # Main menu logic
+│   ├── ui.sh          # UI components
+│   ├── launcher.sh    # Service launcher
+│   ├── backup.sh      # Backup functions
+│   ├── updater.sh     # Update manager
+│   ├── security.sh    # System settings
+│   ├── plugins.sh     # Plugin manager
+│   └── ...
+├── modules/           # Optional tool modules
+│   ├── adb_keepalive.sh
+│   ├── clewd.sh
+│   ├── Gemini_CLI.sh
+│   └── ...
+├── config/            # Configuration files
+└── scripts/           # Helper scripts
 ```
 
-**线路 4 (Likk):**
-```bash
-curl -s -L https://gh.likk.cc/https://raw.githubusercontent.com/Future-404/TAV-X/main/st.sh -o st.sh && chmod +x st.sh && ./st.sh; source ~/.bashrc
-```
+---
 
-### ⚠️ 重要提示：首次运行操作规范
-为了确保快捷指令 `st` 正确生效，请严格按照以下步骤操作：
-1.  执行上述安装命令后，脚本会自动进入安装流程并最终显示菜单界面。
-2.  **请不要进行任何操作！** 在首次进入菜单界面时，直接输入数字 `0` 并回车退出脚本。
-3.  退出后，脚本会自动刷新环境（或者您也可以手动输入 `source ~/.bashrc`）。
-4.  在终端输入 `st` 并回车。
-5.  此时脚本再次启动，环境配置已完全生效，您可以正常使用所有功能了。
+## 💡 Tips & Troubleshooting
+
+### Network Issues
+
+- **Behind Firewall**: Use the mirror selection feature for Chinese users
+- **Cloudflare Timeout**: Try toggling VPN on/off and retry
+- **GitHub Access**: Configure a proxy in Network Settings
+
+### Performance
+
+- **Memory Tuning**: Adjust in System Settings → Memory Configuration
+- **Background Killing**: Enable ADB Keep-Alive in Advanced Tools
+- **Slow Startup**: Enable "Lazy Load Characters" in Core Settings
+
+### Common Errors
+
+| Error | Solution |
+|-------|----------|
+| "Port already in use" | Stop existing services first |
+| "Permission denied" | Run `termux-setup-storage` |
+| "Dependencies failed" | Try `pkg upgrade` then reinstall |
 
 ---
 
-## 🛡️ 安全与多用户设置
+## 🤝 Contributing
 
-为了保障您的数据安全和实现跨设备协作，请务必注意以下关键信息：
-
-*   **多用户模式已开启**：本脚本已自动在配置文件中开启了多用户（User Accounts）和谨慎登录（Discreet Login）功能。
-*   **首次登录安全提醒**：
-    *   默认管理员用户名：`default-user`
-    *   首次登录无密码：由于安全考虑，首次运行后 `default-user` 没有默认密码。
-    *   **立即设置密码**：您必须在登录后，前往管理员设置页面自行设置一个强密码。请务必妥善保管您的密码。
-*   **分享与协作**：脚本启动远程分享后会生成一个 Cloudflare 隧道链接，您可以将此链接和您创建的用户账号分享给他人，实现多用户同时访问。
-*   **内网穿透**：如果需要远程启动，请勿使用全局VPN，会大大降低Cloudflare 隧道链接成功率。
+Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ---
 
-## 💡 常见问题与进阶指南 (FAQ)
+## 📄 License
 
-### 1. 🌐 进阶技巧：如何同时使用 VPN 和 远程分享？
-
-**Q：我的酒馆需要挂梯子才能连上 OpenAI/Claude，但开启 VPN 后 TAV-X 的远程链接（Cloudflare）就断了，怎么办？**
-
-**A：请使用“分应用代理”模式！不要让 Termux 直接走 VPN 流量。**
-
-核心原理：我们需要让 Termux 的系统流量（Cloudflare 隧道）走直连，而只让酒馆程序（通过内部配置）走本地代理端口。
-
-**操作步骤：**
-
-*   **第一步：保持 VPN App 开启，但在设置中“排除” Termux**
-    请打开您的代理软件，找到 **分应用代理 ** 或 **访问控制 ** 功能，将 `Termux` 设置为 **“绕过 ”** 或 **“不代理”**。
-    *   **Clash 用户**：进入 `设置` -> `访问控制` -> 模式选择 `仅允许已选应用` (不要勾选 Termux) 或者选择 `不代理已选应用` (勾选 Termux)。
-    *   **v2rayNG 用户**：进入 `设置` -> `分应用代理` -> 开启开关 -> 模式选择 `绕过局域网及位于分应用代理黑名单内的应用` -> 在列表中勾选 `Termux`。
-
-*   **第二步：获取本地 HTTP 代理端口**
-    在您的 VPN App 设置中找到 **“HTTP 代理端口”**（通常是 `7890`、`10809` 或 `20171`），请记下这个数字。
-
-*   **第三步：在 TAV-X 脚本中配置 API 代理**
-    1.  打开 Termux，输入 `st` 运行脚本。
-    2.  选择 **`7. 🌐 设置 API 代理配置`** -> **`1. 🟢 开启/设置代理`**。
-    3.  输入您的本地代理地址（例如：`http://127.0.0.1:7890`，注意替换为您刚才记下的端口号）。
-
-**🎉 效果：** 设置完成后，您的 Cloudflare 远程链接将保持稳定直连，而酒馆内的 AI 对话将通过代理端口飞速响应！
-
-### 2.👁️‍🗨️ 保活模块常见问题
-
-**Q: 报错 `protocol fault (couldn't read status message)` 怎么办？**
-
-A: 这是 ADB 服务卡死了。在连接菜单输入 `r`，脚本会自动重启 ADB 服务并修复。
-
-**Q: 重启手机后还需要做吗？**
-
-A: **需要。** 无线调试开关重启后会关闭，且部分系统设置（如幽灵进程限制）重启后会恢复默认。建议重启手机后重新运行一次本模块。
-
-**Q: 使用 127.0.0.1 还是 192.168.x.x？**
-
-A: 强烈建议使用 **127.0.0.1**。这是本地回环地址，不经过路由器，速度最快且不会受网络波动影响。
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-### 2. 💾 数据备份与恢复指南
+## 🙏 Acknowledgments
 
-**Q：我该如何备份和恢复数据？如果不小心修改了备份文件名会怎样？**
-
-**A：TAV-X 提供了安全的数据管理机制，请务必遵守以下规则以确保数据不丢失。**
-
-**关于备份 (Backup)**
-*   **备份内容**：脚本只备份核心的 `data` 目录（包含聊天记录、角色卡、世界书、用户设置）。
-*   **存放位置**：备份文件**不**在 Termux 里，而是存储在您手机的 **内部存储/Download/ST_Backup** 文件夹中。
-*   **安全性**：即使您卸载了 Termux，只要不删除手机下载目录里的这个文件夹，您的数据就是安全的。
-
-**关于恢复**
-*   **操作步骤**：运行脚本输入 `st` -> 选择 **`8. 💾 数据备份与恢复`** -> 选择 **`2. 📤 恢复数据`** -> 选择对应的备份文件即可。
-*   **⚠️ 警告：严禁修改文件名！**
-    脚本依靠特定的文件名格式来识别备份文件。
-    备份文件必须保持 `ST_Backup_时间戳.tar.gz` 的格式（例如：`ST_Backup_20231125_120000.tar.gz`）。
-    *   **❌ 错误做法**：手动重命名为 `my_backup.tar.gz`。
-    *   **后果**：脚本将**无法识别**该文件，导致您无法在恢复列表中看到它，也无法进行恢复！
-
-**只有 Termux 重装了怎么办？**
-只要您的备份文件还在 `Download/ST_Backup` 目录下且文件名未被修改，您只需重新安装 TAV-X 脚本，在首次启动后直接进入备份菜单执行“恢复”操作，您的所有数据就会瞬间回来了！
+- [SillyTavern](https://github.com/SillyTavern/SillyTavern) - The core AI frontend
+- [Cloudflare](https://www.cloudflare.com/) - Free tunneling service
+- [Termux](https://termux.dev/) - Android terminal emulator
+- [Gum](https://github.com/charmbracelet/gum) - Terminal UI toolkit
 
 ---
 
+## 📞 Contact
 
-## 📖 TAV-X ADB 保活模块使用指南
-
-> **为什么你需要这个？**
-> 如果你的酒馆经常在聊到一半时突然断开，或者手机锁屏几分钟后就无法连接，通常是因为 Android 系统的激进杀后台机制（特别是 Android 12+ 的 Phantom Process Killer）。本模块通过 ADB 权限彻底解决此问题。
-
-### ✅ 准备工作
-1.  **系统要求**：Android 11 及以上版本（支持无线调试）。
-2.  **无需 Root**：所有操作均通过标准 ADB 协议完成。
-3.  **连接 WiFi**：无线调试需要手机连接 WiFi（任何 WiFi 均可，甚至未联网的路由器）。
-
-### ⚡️ 操作步骤
-
-#### 第一步：进入模块
-运行 `st`，在主菜单选择 **`11. 🛡️ ADB保活`**。脚本会自动下载并加载保活模块。
-
-#### 第二步：配对 (仅首次需要)
-*如果之前没用过无线调试，或者连接报错 `Connection refused`，请执行此步。*
-
-1.  手机开启 **分屏模式** 或 **小窗模式**（一边是 Termux，一边是系统设置）。
-2.  进入手机 **设置 -> 开发者选项 -> 无线调试**。
-3.  点击 **“使用配对码配对设备”**。
-4.  在 TAV-X 菜单中输入 `1` 进入连接助手，然后输入 `p` 进入配对模式。
-5.  按照提示输入弹窗中的 **IP:端口** 和 **6位配对码**。
-    *   *建议使用 `127.0.0.1:端口` 格式，更稳定。*
-
-#### 第三步：连接 ADB
-1.  配对成功后，回到【无线调试】主界面。
-2.  查看主界面显示的 **“IP地址和端口”**（注意：这与刚才的配对端口不同！）。
-3.  在 TAV-X 菜单中输入该端口号。
-4.  显示 `✔ ADB 连接成功` 即为完成。
-
-#### 第四步：一键保活
-1.  连接成功后，在模块菜单选择 **`2. 执行系统级保活`**。
-2.  脚本会依次询问策略，建议 **全部输入 `y` 确认**：
-    *   **禁用幽灵进程杀手**：核心功能，必选。
-    *   **电池白名单**：防止 Doze 模式冻结，必选。
-    *   **后台权限**：防止被系统清理，必选。
-    *   **WakeLock**：申请后通知栏会出现 Termux 通知，确保锁屏 CPU 不休眠。
-3.  看到 `✅ 保活策略应用完成！` 后，你的 Termux 就获得了“免死金牌”。
+- **Author**: Future 404
+- **QQ Group**: 616353694
+- **GitHub**: [Future-404/TAV-X](https://github.com/Future-404/TAV-X)
 
 ---
 
-### 📥 如何更新？
-在 Termux 中运行 `st`，选择 **`5. 更新管理`** -> **`2. 📜 更新 TAV-X`** 即可自动升级到 v1.12.0。
-
-
-感谢您对 TAV-X 的支持！在使用过程中如遇到任何问题，欢迎到项目 GitHub 仓库 提交 Issue。
+*"Don't let virtual warmth steal the real warmth you deserve in life."*

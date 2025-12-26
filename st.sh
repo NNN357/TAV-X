@@ -51,8 +51,8 @@ NC='\033[0m'
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 if [ -f "$SCRIPT_DIR/core/main.sh" ]; then
-    echo -e "\033[1;35m🔧 [DEV MODE] 开发者模式已激活\033[0m"
-    echo -e "📂 使用此目录作为运行环境: $SCRIPT_DIR"
+    echo -e "\033[1;35m🔧 [DEV MODE] Developer mode activated\033[0m"
+    echo -e "📂 Using this directory as runtime: $SCRIPT_DIR"
 
     export TAVX_DIR="$SCRIPT_DIR"
 
@@ -81,11 +81,11 @@ cat << "BANNER"
 ░╚═════╝░╚═╝░░░░░░╚═════╝░╚═╝░░╚═╝╚═════╝░╚══════╝
 BANNER
 echo -e "${NC}"
-echo -e "${CYAN}TAV-X 智能安装程序${NC} [Ver: ${TAV_VERSION}]"
+echo -e "${CYAN}TAV-X Smart Installer${NC} [Ver: ${TAV_VERSION}]"
 echo "------------------------------------------------"
 
 if ! command -v git &> /dev/null; then
-    echo -e "${YELLOW}>>> 正在安装基础依赖 (Git)...${NC}"
+    echo -e "${YELLOW}>>> Installing base dependencies (Git)...${NC}"
     pkg update -y >/dev/null 2>&1
     pkg install git -y
 fi
@@ -95,38 +95,38 @@ test_connection() {
 }
 
 probe_direct_or_env() {
-    echo -e "${YELLOW}>>> [1/3] 探测现有网络环境...${NC}"
+    echo -e "${YELLOW}>>> [1/3] Probing network environment...${NC}"
 
     if [ -n "$http_proxy" ] || [ -n "$https_proxy" ]; then
-        echo -e "    检测到环境变量代理: ${CYAN}${https_proxy:-$http_proxy}${NC}"
+        echo -e "    Environment proxy detected: ${CYAN}${https_proxy:-$http_proxy}${NC}"
         if test_connection; then
-            echo -e "${GREEN}    ✔ 代理有效！${NC}"
+            echo -e "${GREEN}    ✔ Proxy is working!${NC}"
             return 0
         else
-            echo -e "${RED}    ✘ 环境变量代理不可用${NC}"
+            echo -e "${RED}    ✘ Environment proxy unavailable${NC}"
             unset http_proxy https_proxy all_proxy
         fi
     fi
 
-    echo -ne "    尝试直连 GitHub... "
+    echo -ne "    Trying direct connection to GitHub... "
     if test_connection; then
-        echo -e "${GREEN}成功${NC}"
+        echo -e "${GREEN}Success${NC}"
         return 0
     else
-        echo -e "${RED}失败${NC}"
+        echo -e "${RED}Failed${NC}"
         return 1
     fi
 }
 
 probe_local_ports() {
-    echo -e "\n${YELLOW}>>> [2/3] 扫描本地代理端口...${NC}"
+    echo -e "\n${YELLOW}>>> [2/3] Scanning local proxy ports...${NC}"
 
     for entry in "${PROXY_PORTS[@]}"; do
         local port=${entry%%:*}
         local proto=${entry#*:}
 
         if timeout 0.2 bash -c "</dev/tcp/127.0.0.1/$port" 2>/dev/null; then
-            echo -e "    🔍 发现端口: ${CYAN}$port ($proto)${NC}"
+            echo -e "    🔍 Port found: ${CYAN}$port ($proto)${NC}"
 
             if [[ "$proto" == "socks5h" ]]; then
                 proxy_url="socks5h://127.0.0.1:$port"
@@ -138,23 +138,23 @@ probe_local_ports() {
             export https_proxy="$proxy_url"
             export all_proxy="$proxy_url"
 
-            echo -ne "    🧪 测试代理... "
+            echo -ne "    🧪 Testing proxy... "
             if test_connection; then
-                echo -e "${GREEN}可用${NC}"
+                echo -e "${GREEN}Available${NC}"
                 return 0
             else
-                echo -e "${RED}失败${NC}"
+                echo -e "${RED}Failed${NC}"
                 unset http_proxy https_proxy all_proxy
             fi
         fi
     done
 
-    echo -e "    ⚠️ 未发现可用代理端口"
+    echo -e "    ⚠️ No available proxy ports found"
     return 1
 }
 
 select_mirror_interactive() {
-    echo -e "\n${YELLOW}>>> [3/3] 启动镜像并发测速 (Smart Race)...${NC}"
+    echo -e "\n${YELLOW}>>> [3/3] Starting mirror speed test (Smart Race)...${NC}"
     echo "------------------------------------------------"
 
     local tmp_race_file="/data/data/com.termux/files/usr/tmp/tav_mirror_race"
@@ -181,14 +181,14 @@ select_mirror_interactive() {
     wait
     echo ""
     if [ ! -s "$tmp_race_file" ]; then
-        echo -e "${RED}❌ 所有线路均连接超时，请检查网络或开启/关闭飞行模式。${NC}"
+        echo -e "${RED}❌ All mirrors timed out. Please check your network or toggle airplane mode.${NC}"
         exit 1
     fi
 
     sort -n "$tmp_race_file" -o "$tmp_race_file"
 
     echo "------------------------------------------------"
-    echo -e " 延迟(ms) | 镜像源"
+    echo -e " Latency(ms) | Mirror Source"
     echo "------------------------------------------------"
 
     VALID_URLS=()
@@ -198,7 +198,7 @@ select_mirror_interactive() {
         elif [ $dur -lt 1000 ]; then C_CODE=$YELLOW;
         else C_CODE=$RED; fi
         if [[ "$url" == *"github.com"* ]]; then
-             DISPLAY_NAME="GitHub 官方"
+             DISPLAY_NAME="GitHub Official"
              DL_LINK="https://github.com/${REPO_PATH}"
         else
              DISPLAY_NAME=$(echo $url | awk -F/ '{print $3}')
@@ -213,8 +213,8 @@ select_mirror_interactive() {
     rm -f "$tmp_race_file"
 
     echo "------------------------------------------------"
-    echo -e "${CYAN}系统已自动排序，建议选择前几项。${NC}"
-    echo -e "${CYAN}请输入序号选择下载源 (默认 1)：${NC}"
+    echo -e "${CYAN}Auto-sorted by speed. Recommended: choose from top options.${NC}"
+    echo -e "${CYAN}Enter number to select download source (default 1):${NC}"
     read -p ">>> " USER_CHOICE
     if [[ -z "$USER_CHOICE" ]]; then
         USER_CHOICE=1
@@ -222,9 +222,9 @@ select_mirror_interactive() {
 
     if [[ "$USER_CHOICE" =~ ^[0-9]+$ ]] && [ "$USER_CHOICE" -ge 1 ] && [ "$USER_CHOICE" -le "${#VALID_URLS[@]}" ]; then
         DL_URL="${VALID_URLS[$((USER_CHOICE-1))]}"
-        echo -e "${GREEN}✔ 已选择: $DL_URL${NC}"
+        echo -e "${GREEN}✔ Selected: $DL_URL${NC}"
     else
-        echo -e "${RED}无效输入，自动选择最快线路 (第1项)${NC}"
+        echo -e "${RED}Invalid input, auto-selecting fastest mirror (option 1)${NC}"
         DL_URL="${VALID_URLS[0]}"
     fi
 }
@@ -241,8 +241,8 @@ fi
 
 if [ -d "$TAVX_DIR" ]; then rm -rf "$TAVX_DIR"; fi
 
-echo -e "\n${CYAN}>>> 正在拉取核心组件...${NC}"
-echo -e "源地址: $DL_URL"
+echo -e "\n${CYAN}>>> Fetching core components...${NC}"
+echo -e "Source: $DL_URL"
 
 if git clone --depth 1 "$DL_URL" "$TAVX_DIR"; then
     chmod +x "$TAVX_DIR/st.sh" "$TAVX_DIR"/core/*.sh "$TAVX_DIR"/modules/*.sh 2>/dev/null
@@ -254,16 +254,16 @@ if git clone --depth 1 "$DL_URL" "$TAVX_DIR"; then
     echo "alias st='bash $TAVX_DIR/st.sh'" >> "$SHELL_RC"
 
     if ! command -v gum &> /dev/null; then
-        echo -e "${YELLOW}>>> 部署 UI 引擎 (Gum)...${NC}"
+        echo -e "${YELLOW}>>> Deploying UI engine (Gum)...${NC}"
         pkg install gum -y >/dev/null 2>&1
     fi
 
     echo ""
-    echo -e "${GREEN}🎉 TAV-X 安装成功！${NC}"
-    echo -e "👉 请输入 ${CYAN}source ~/.bashrc${NC} 生效，然后输入 ${CYAN}st${NC} 启动。"
+    echo -e "${GREEN}🎉 TAV-X installed successfully!${NC}"
+    echo -e "👉 Please run ${CYAN}source ~/.bashrc${NC} to apply, then type ${CYAN}st${NC} to start."
 
 else
-    echo -e "\n${RED}❌ 下载失败${NC}"
-    echo -e "请重新运行脚本并选择其他线路。"
+    echo -e "\n${RED}❌ Download failed${NC}"
+    echo -e "Please re-run the script and select a different mirror."
     exit 1
 fi

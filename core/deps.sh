@@ -48,8 +48,8 @@ check_dependencies() {
     if [ -n "$MISSING_PKGS" ]; then
         echo -e "${BLUE}[INFO]${NC} Missing components detected, auto-installing: $MISSING_PKGS"
         
-        pkg update -y
-        pkg install $MISSING_PKGS -y
+        yes | pkg update -y -o Dpkg::Options::="--force-confold"
+        yes | pkg install $MISSING_PKGS -y -o Dpkg::Options::="--force-confold"
         
         if command -v node &> /dev/null && \
            command -v git &> /dev/null && \

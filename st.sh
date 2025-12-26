@@ -90,8 +90,9 @@ echo "------------------------------------------------"
 
 if ! command -v git &> /dev/null; then
     echo -e "${YELLOW}>>> Installing base dependencies (Git)...${NC}"
-    pkg update -y >/dev/null 2>&1
-    pkg install git -y
+    # Silent update with forced config resolution
+    yes | pkg update -y -o Dpkg::Options::="--force-confold" >/dev/null 2>&1
+    yes | pkg install git -y -o Dpkg::Options::="--force-confold"
 fi
 
 test_connection() {
